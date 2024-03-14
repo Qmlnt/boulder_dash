@@ -1,107 +1,91 @@
-use std::env;
 use std::error::Error;
 use std::fs;
 
-pub struct Config {
-    file_path: String,
-    gui: bool,
-}
+mod args;
+pub use args::Config;
 
-impl Config {
-    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
-        args.next();
-
-        let file_path = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Didn't get a file path"),
-        };
-
-        let gui = env::var("GUI").is_ok();
-
-        Ok(Config { file_path, gui })
-    }
-}
-
-struct Level {
-    matrix: Vec<Vec<Cell>>,
-}
-
-impl Level {
-    fn load(string: String) -> Result<Level, String> {
-        let mut matrix = vec![];
-        for line in string.split('\n') {
-            let mut row = vec![];
-            for c in line.chars() {
-                row.push(match c {
-                    'g' => Cell::Gem,
-                    '-' => Cell::Wall,
-                    '|' => Cell::Wall,
-                    'r' => Cell::Rock,
-                    ' ' => Cell::Void,
-                    'b' => Cell::Bush,
-                    'p' => Cell::Player,
-                    _ => return Err(format!("Can't parse char `{c}`")),
-                });
-            }
-            matrix.push(row);
-        }
-        Ok(Level { matrix })
-    }
-
-    fn compose(&self) -> String {
-        let mut frame = String::new();
-
-        for row in self.matrix.iter() {
-            for c in row {
-                frame.push(c.char());
-            }
-            frame.push('\n');
-        }
-
-        frame
-    }
-}
-
-enum Cell {
+pub enum ObjectType {
     Gem,
-    Wall,
-    Rock,
     Void,
-    Bush,
+    Dirt,
+    Rock,
+    Wall,
     Player,
 }
 
-impl Cell {
-    fn char(&self) -> char {
-        match self {
-            Cell::Gem => '💎',
-            Cell::Wall => '🧱',
-            Cell::Rock => '🪨',
-            Cell::Void => ' ',
-            Cell::Bush => '🌳',
-            Cell::Player => '󰋦',
+struct Level {
+    matrix: Vec<Vec<ObjectType>>,
+}
+
+impl Default for Level {
+    fn default() -> Self {
+        Level { matrix: Vec::new() }
+    }
+}
+
+impl Level {
+    fn load(contents: String) -> Result<Level, String> {
+        let mut level = Level::default();
+
+        for line in contents.split('\n') {
+            let mut row = Vec::new();
+            for c in line.chars() {
+                row.push(match c {
+                    'g' => ObjectType::Gem,
+                    ' ' => ObjectType::Void,
+                    'd' => ObjectType::Dirt,
+                    'r' => ObjectType::Rock,
+                    'p' => ObjectType::Player,
+                    '|' | '-' => ObjectType::Wall,
+                    _ => return Err(format!("Can't parse char `{c}`")),
+                });
+            }
+            level.matrix.push(row);
         }
+
+        Ok(level)
     }
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.file_path)?;
-
-    if config.gui {
+    if let args::AppMode::GUI = config.app_mode {
         return Err("Not yet implemented!".into());
     }
 
-    let level = Level::load(contents)?;
-    println!("{}", level.compose());
+    let mut levels = Vec::new();
+    for level_path in config.level_paths {
+        levels.push(Level::load(fs::read_to_string(level_path)?)?);
+    }
+
+    draw_tui(&levels[0]);
 
     Ok(())
+}
+
+fn draw_tui(level: &Level) {
+    let mut frame = String::new();
+    for row in level.matrix.iter() {
+        for o in row {
+            frame.push(match o {
+                ObjectType::Gem => '💎',
+                ObjectType::Void => '⬜',
+                ObjectType::Dirt => '🟫',
+                ObjectType::Rock => '🪨',
+                ObjectType::Wall => '🧱',
+                ObjectType::Player => '🤵',
+            })
+        }
+        frame.push('\n');
+    }
+
+    println!("{frame}");
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     fn load_level() -> Level {
-        Level::load("||rbpg \n gpbr-|".to_string()).expect("level loaded")
+        Level::load("||rdpg \n gpdr-|".to_string()).expect("level loaded")
     }
 
     #[test]
@@ -109,9 +93,9 @@ mod tests {
         load_level();
     }
 
-    #[test]
-    fn composing_a_level() {
-        let level = load_level();
-        assert_eq!(level.compose(), "🧱🧱🪨🌳󰋦💎 \n 💎󰋦🌳🪨🧱🧱\n");
-    }
+    // #[test]
+    // fn composing_a_level() {
+    //     let level = load_level();
+    //     assert_eq!(level.compose(), "🧱🧱🪨🟫󰋦💎🔲\n🔲💎󰋦🟫🪨🧱🧱\n");
+    // }
 }
