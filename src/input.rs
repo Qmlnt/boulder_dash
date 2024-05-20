@@ -4,7 +4,7 @@ use std::{sync::mpsc, thread};
 pub enum Input {
     Esc,
     Quit,
-    Idle,
+    Unknown,
 
     Up,
     Down,
@@ -40,6 +40,6 @@ pub fn read_term(rx: &mpsc::Receiver<Key>) -> Input {
         Key::Char('r') | Key::ArrowDown => Input::Down,
         Key::Char('a') | Key::ArrowLeft => Input::Left,
         Key::Char('s') | Key::ArrowRight => Input::Right,
-        _ => Input::Idle,
+        _ => Input::Unknown,
     }
 }

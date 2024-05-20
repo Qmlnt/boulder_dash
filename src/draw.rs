@@ -1,24 +1,16 @@
 use std::io;
 
-use crate::Level;
-use crate::LevelUpdate;
+use crate::{Level, LevelObject, LevelObj};
 use console::Term;
 // use crate::Point;
 
-pub trait Drawable {
-    fn char(&self) -> &str;
-    fn sprite(&self) {
-        todo!()
-    }
-}
-
-pub enum Draw {
+pub enum Draw<'a> {
     Win,
     Lose,
     Init,
     Pause,
-    Status(Vec<String>),
-    Damaged(Vec<(usize, usize, Box<dyn Drawable>)>),
+    Status(&'a [String]),
+    Damaged(Vec<((usize, usize), Option<&'a LevelObject>)>),
 }
 
 pub fn tui(draw: Draw) -> io::Result<()> {
@@ -38,10 +30,10 @@ pub fn tui(draw: Draw) -> io::Result<()> {
             }
         }
         Draw::Damaged(damaged) => {
-            for (x, y, obj) in damaged {
-                out.move_cursor_to(0, 0)?;
+            for ((x, y), obj) in damaged {
+                // out.move_cursor_to(0, 0)?;
                 out.move_cursor_to(x, y)?;
-                out.write_line(obj.char())?;
+                out.write_line(obj.map_or("　", |o| o.char()))?;
             }
         }
         Draw::Win | Draw::Lose => out.show_cursor().unwrap(),

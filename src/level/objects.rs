@@ -1,33 +1,19 @@
-pub struct Props {
-    pub fall: bool,
-    pub control: bool,
-    pub move_force: u8,
-    pub break_force: u8,
-    pub moved_with: u8,
-    pub broken_with: u8,
-    pub on_broken: Option<ObjEvent>,
-}
+use enum_dispatch::enum_dispatch;
 
-pub enum ObjEvent {
-    AddScore(u8),
-    GameOver,
-}
+mod dirt;
+mod gem;
+mod player;
+mod rock;
+mod wall;
 
-impl Default for Props {
-    fn default() -> Self {
-        Self {
-            fall: false,
-            control: false,
-            move_force: 0,
-            break_force: 0,
-            moved_with: u8::MAX,
-            broken_with: u8::MAX,
-            on_broken: None,
-        }
-    }
-}
+use dirt::Dirt;
+use gem::Gem;
+use player::Player;
+use rock::Rock;
+use wall::Wall;
 
-pub enum LevelObj {
+#[enum_dispatch]
+pub enum LevelObject {
     Gem,
     Wall,
     Dirt,
@@ -35,42 +21,41 @@ pub enum LevelObj {
     Player,
 }
 
-impl LevelObj {
-    pub fn parse(chr: char) -> Result<Self, String> {
-        Ok(match chr {
-            'g' => Self::Gem,
-            '#' => Self::Wall,
-            'd' => Self::Dirt,
-            'r' => Self::Rock,
-            'p' => Self::Player,
-            _ => return Err(format!("Can't parse char `{chr}`")),
-        })
+pub enum ObjRequest {
+    AddScore,
+    AddMaxScore,
+    GameLost,
+}
+
+#[enum_dispatch(LevelObject)]
+pub trait LevelObj {
+    fn char(&self) -> &str;
+
+    fn init(&self) -> Option<ObjRequest> {
+        None
+    }
+    fn on_broken(&self) -> Option<ObjRequest> {
+        None
     }
 
-    pub fn get_props(&self) -> Props {
-        let mut props = Props::default();
-
-        match self {
-            Self::Dirt => props.broken_with = 2,
-            Self::Gem => {
-                props.broken_with = 2;
-                props.on_broken = Some(ObjEvent::AddScore(1));
-            }
-            Self::Rock => {
-                props.fall = true;
-                props.moved_with = 1;
-                props.break_force = 1;
-            }
-            Self::Player => {
-                props.control = true;
-                props.move_force = 1;
-                props.break_force = 2;
-                props.broken_with = 1;
-                props.on_broken = Some(ObjEvent::GameOver);
-            }
-            _ => (),
-        }
-
-        props
+    fn rock(&self) -> bool {
+        false
     }
+    fn player(&self) -> bool {
+        false
+    }
+    fn broken_by_player(&self) -> bool {
+        false
+    }
+}
+
+pub fn parse(chr: char) -> Result<LevelObject, String> {
+    Ok(match chr {
+        'g' => Gem.into(),
+        '#' => Wall.into(),
+        'd' => Dirt.into(),
+        'r' => Rock.into(),
+        'p' => Player.into(),
+        _ => return Err(format!("Can't parse char `{chr}`")),
+    })
 }

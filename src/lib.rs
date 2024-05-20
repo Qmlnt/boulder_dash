@@ -9,12 +9,9 @@ mod level;
 
 use args::AppMode;
 pub use args::Config;
-use input::Input;
 use draw::Draw;
-use draw::Drawable;
-// use level::Direction;
-use level::Level;
-use level::LevelUpdate;
+use input::Input;
+use level::{Dir, Level, LevelObj, LevelObject, LevelUpdate};
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let input_receiver = input::init_term();
@@ -30,34 +27,41 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
         draw::tui(Draw::Init);
 
         loop {
-            thread::sleep(Duration::from_millis(200));
+            thread::sleep(Duration::from_millis(2000));
 
-            let mut direction = Direction::Idle;
+            let mut direction = None;
             match input::read_term(&input_receiver) {
-                Input::Idle => {}
+                Input::Unknown => (),
                 Input::Quit => process::exit(0),
                 Input::Esc | Input::Space => paused = !paused,
 
-                Input::Up => direction = Direction::Up,
-                Input::Down => direction = Direction::Down,
-                Input::Left => direction = Direction::Left,
-                Input::Right => direction = Direction::Right,
+                Input::Up => direction = Some(Dir::Up),
+                Input::Down => direction = Some(Dir::Down),
+                Input::Left => direction = Some(Dir::Left),
+                Input::Right => direction = Some(Dir::Right),
             }
 
             if paused {
                 continue;
             }
 
-            // let level_state = level.tick(direction);
-            //
-            // if matches!(level_state, LevelUpdate::Win | LevelUpdate::Lose) {
-            //     draw::tui(level_state);
-            //     break;
-            // }
-            //
-            // // out.clear_line().unwrap(); // TODO
-            // // out.write_line(&format!("\nScore: {score}/{max_score}")) .unwrap();
-            // draw::tui(level_state);
+            let LevelUpdate {
+                score,
+                max_score,
+                state,
+                damaged,
+            } = level.tick(direction);
+
+            if damaged.is_empty() {
+                continue;
+            }
+
+            draw::tui(Draw::Damaged(damaged))?;
+            // draw::tui(Draw::Status(&[format!("\nScore: {score}/{max_score}")]));
+
+            if state.is_some() {
+                todo!();
+            }
         }
     }
 
