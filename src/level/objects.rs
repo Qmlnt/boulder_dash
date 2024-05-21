@@ -4,12 +4,14 @@ mod dirt;
 mod gem;
 mod player;
 mod rock;
+mod void;
 mod wall;
 
 use dirt::Dirt;
 use gem::Gem;
 use player::Player;
 use rock::Rock;
+use void::Void;
 use wall::Wall;
 
 #[enum_dispatch]
@@ -18,6 +20,7 @@ pub enum Object {
     Wall,
     Dirt,
     Rock,
+    Void,
     Player,
 }
 
@@ -41,10 +44,14 @@ pub trait Obj {
     fn rock(&self) -> bool {
         false
     }
-    fn player(&self) -> bool {
+
+    fn breakable(&self) -> bool {
         false
     }
-    fn broken_by_player(&self) -> bool {
+    fn void(&self) -> bool {
+        false
+    }
+    fn player(&self) -> bool {
         false
     }
 }
@@ -55,6 +62,7 @@ pub fn parse(chr: char) -> Result<Object, String> {
         '#' => Wall.into(),
         'd' => Dirt.into(),
         'r' => Rock.into(),
+        ' ' => Void.into(),
         'p' => Player.into(),
         _ => return Err(format!("Can't parse char `{chr}`")),
     })

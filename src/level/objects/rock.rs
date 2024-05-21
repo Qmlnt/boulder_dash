@@ -7,6 +7,6 @@ impl Obj for Rock {
         true
     }
     fn char(&self) -> &str {
-        "r"
+        "🪨"
     }
 }

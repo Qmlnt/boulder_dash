@@ -10,6 +10,6 @@ impl Obj for Player {
         Some(Request::GameLost)
     }
     fn char(&self) -> &str {
-        "p"
+        "🦀"
     }
 }

@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 mod objects;
 pub use objects::Obj;
 pub use objects::Object;
@@ -7,6 +5,7 @@ use objects::Request;
 
 type Point = (usize, usize); // (x, y)
 
+#[derive(Clone)]
 pub enum State {
     Win,
     Lose,
@@ -16,7 +15,7 @@ pub struct Update<'a> {
     pub score: usize,
     pub max_score: usize,
     pub state: Option<State>,
-    pub damaged: Vec<(Point, Option<&'a Object>)>,
+    pub matrix: &'a Vec<Vec<Object>>,
 }
 
 #[derive(Default)]
@@ -25,37 +24,37 @@ pub struct Level {
     max_score: usize,
     state: Option<State>,
     player: Point,
-    rocks: HashSet<Point>,
-    damaged: HashSet<Point>,
-    objects: HashMap<Point, Object>,
+    matrix: Vec<Vec<Object>>,
 }
 
 impl Level {
     pub fn parse(string: &str) -> Result<Self, String> {
         let mut level = Self::default();
 
-        for (y, line) in string.lines().enumerate() {
-            for (x, chr) in line.chars().enumerate() {
-                if chr != ' ' {
-                    let obj = objects::parse(chr)?;
-                    level.handle_request(obj.init());
-                    level.add_obj((x, y), obj);
+        for line in string.lines() {
+            let mut row = vec![];
+
+            for chr in line.chars() {
+                let obj = objects::parse(chr)?;
+                level.handle_request(obj.init());
+                if obj.player() {
+                    level.player = (row.len() - 1, level.matrix.len());
                 }
+
+                row.push(obj);
             }
+            level.matrix.push(row);
         }
 
         Ok(level)
     }
 
-    pub fn get_update(&mut self) -> Update {
+    pub fn get_update(&self) -> Update {
         Update {
-            state: self.state.take(),
             score: self.score,
             max_score: self.max_score,
-            damaged: std::mem::take(&mut self.damaged)
-                .into_iter()
-                .map(|point| (point, self.objects.get(&point)))
-                .collect(),
+            state: self.state.clone(),
+            matrix: &self.matrix,
         }
     }
 
@@ -69,88 +68,64 @@ impl Level {
         }
     }
 
-    fn add_obj(&mut self, point: Point, obj: Object) {
-        if obj.rock() {
-            self.rocks.insert(point);
-        } else if obj.player() {
-            self.player = point;
-        }
-
-        self.damaged.insert(point);
-        self.objects.insert(point, obj);
-    }
-
-    fn rem_obj(&mut self, point: &Point, handle: bool) -> Option<Object> {
-        let obj = self.objects.get(point)?;
-        if obj.rock() {
-            self.rocks.remove(point);
-        }
-        if handle {
-            self.handle_request(obj.on_broken());
-        }
-
-        self.damaged.insert(*point);
-        self.objects.remove(point)
-    }
-
-    fn move_obj(&mut self, point: &Point, dir: &Dir) {
-        let dir_point = dir.apply_to(point);
-        self.rem_obj(&dir_point, true);
-
-        if let Some(obj) = self.rem_obj(point, false) {
-            self.add_obj(dir_point, obj);
-        }
-    }
-
-    fn empty(&self, mut point: Point, directions: &[Dir]) -> bool {
-        for dir in directions {
-            point = dir.apply_to(&point);
-            if self.objects.get(&point).is_some() {
-                return false;
-            }
-        }
-        true
-    }
-
     pub fn tick(&mut self, direction: Option<Dir>) -> Update {
-        let mut can_break_player = true;
+        // to prevent the rock from falling on player when object underneath is broken
+        let mut player_broke = match self.state {
+            None => false,
+            Some(State::Win) => true,
+            Some(State::Lose) => return self.get_update(),
+        };
 
+        // Player
         if let Some(dir) = direction {
-            let next_point = dir.apply_to(&self.player);
-            let next_obj = self.objects.get(&next_point);
+            let (nx, ny) = dir.apply_to(&self.player);
+            let (mx, my) = dir.apply_to(&(nx, ny));
+            let next_obj = self.matrix[ny][nx];
 
-            if let Some(next_obj) = next_obj {
-                if next_obj.broken_by_player() {
-                    self.move_obj(&self.player.clone(), &dir);
-                    can_break_player = false;
-                } else if next_obj.rock()
-                    && dir != Dir::Up
-                    && self.objects.get(&dir.apply_to(&next_point)).is_none()
-                {
-                    self.move_obj(&next_point, &dir);
-                    self.move_obj(&self.player.clone(), &dir);
-                }
+            let move_next = matches!(dir, Dir::Left | Dir::Right)
+                && next_obj.rock()
+                && self.matrix[my][mx].void();
+
+            if next_obj.breakable() {
+                player_broke = true;
+                self.handle_request(next_obj.on_broken());
+            } else if move_next {
+                std::mem::swap(&mut self.matrix[ny][nx], &mut self.matrix[my][mx]);
+            }
+
+            if next_obj.void() || player_broke || move_next {
+                std::mem::swap(
+                    &mut self.matrix[ny][nx],
+                    &mut self.matrix[self.player.1][self.player.0],
+                );
+                self.player = (nx, ny);
             }
         }
 
-        let mut rocks = Vec::from_iter(self.rocks.clone());
-        rocks.sort_unstable_by(|a, b| a.1.cmp(&b.1));
-
-        for point in rocks {
-            match self.objects.get(&Dir::Down.apply_to(&point)) {
-                Some(obj) => {
-                    if obj.player() && can_break_player {
-                        self.move_obj(&point, &Dir::Down);
-                    } else if self.empty(point, &[Dir::Left, Dir::Down]) {
-                        self.move_obj(&point, &Dir::Left);
-                        self.move_obj(&point, &Dir::Down);
-                    } else if self.empty(point, &[Dir::Right, Dir::Down]) {
-                        self.move_obj(&point, &Dir::Right);
-                        self.move_obj(&point, &Dir::Down);
+        // Rocks
+        for row in (0..self.matrix.len()).rev() {
+            for col in 0..self.matrix[row].len() {
+                // Down
+                if self.matrix[row + 1][col].void() {
+                    std::mem::swap(&mut self.matrix[row][col], &mut self.matrix[row + 1][col]);
+                } else if self.matrix[row + 1][col].player() && !player_broke {
+                    self.handle_request(self.matrix[row + 1][col].on_broken());
+                    std::mem::swap(&mut self.matrix[row][col], &mut self.matrix[row + 1][col]);
+                }
+                // Sideways
+                else {
+                    for side in [col - 1, col + 1] {
+                        if !(self.matrix[row][side].void() && self.matrix[row + 1][side].void()) {
+                            continue;
+                        }
+                        std::mem::swap(&mut self.matrix[row][col], &mut self.matrix[row][side]);
                     }
                 }
-                None => self.move_obj(&point, &Dir::Down),
             }
+        }
+
+        if self.score == self.max_score {
+            self.state = Some(State::Win);
         }
 
         self.get_update()
@@ -166,17 +141,14 @@ pub enum Dir {
 }
 
 impl Dir {
-    const fn get_values(&self) -> (isize, isize) {
-        match self {
+    const fn apply_to(&self, point: &Point) -> Point {
+        let (x, y) = match self {
             Self::Up => (0, -1),
             Self::Down => (0, 1),
             Self::Left => (-1, 0),
             Self::Right => (1, 0),
-        }
-    }
+        };
 
-    const fn apply_to(&self, point: &Point) -> Point {
-        let (x, y) = self.get_values();
         (
             point.0.saturating_add_signed(x),
             point.1.saturating_add_signed(y),
