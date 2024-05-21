@@ -11,7 +11,7 @@ use args::AppMode;
 pub use args::Config;
 use draw::Draw;
 use input::Input;
-use level::{Dir, Level, LevelObj, LevelObject, LevelUpdate};
+use level::{Dir, Level, Obj, Object, Update};
 
 pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let input_receiver = input::init_term();
@@ -24,10 +24,11 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 
     for mut level in levels {
         let mut paused = false;
-        draw::tui(Draw::Init);
+        draw::tui(Draw::Init)?;
+        draw::tui(Draw::Damaged(level.get_update().damaged))?;
 
         loop {
-            thread::sleep(Duration::from_millis(2000));
+            thread::sleep(Duration::from_millis(1000));
 
             let mut direction = None;
             match input::read_term(&input_receiver) {
@@ -45,7 +46,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
                 continue;
             }
 
-            let LevelUpdate {
+            let Update {
                 score,
                 max_score,
                 state,
@@ -57,7 +58,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
             }
 
             draw::tui(Draw::Damaged(damaged))?;
-            // draw::tui(Draw::Status(&[format!("\nScore: {score}/{max_score}")]));
+             // draw::tui(Draw::Status(format!("\nScore: {score}/{max_score}")));
 
             if state.is_some() {
                 todo!();

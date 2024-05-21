@@ -1,12 +1,12 @@
-use super::LevelObj;
+use super::Obj;
 
 pub struct Rock;
 
-impl LevelObj for Rock {
+impl Obj for Rock {
     fn rock(&self) -> bool {
         true
     }
     fn char(&self) -> &str {
-        "🪨"
+        "r"
     }
 }

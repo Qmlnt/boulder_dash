@@ -1,15 +1,18 @@
-use super::{LevelObj, ObjRequest};
+use super::{Obj, Request};
 
 pub struct Gem;
 
-impl LevelObj for Gem {
+impl Obj for Gem {
     fn broken_by_player(&self) -> bool {
         true
     }
-    fn on_broken(&self) -> Option<ObjRequest> {
-        Some(ObjRequest::AddScore)
+    fn init(&self) -> Option<Request> {
+        Some(Request::AddMaxScore)
+    }
+    fn on_broken(&self) -> Option<Request> {
+        Some(Request::AddScore)
     }
     fn char(&self) -> &str {
-        "💎"
+        "g"
     }
 }

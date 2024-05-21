@@ -1,33 +1,33 @@
 use std::collections::{HashMap, HashSet};
 
 mod objects;
-pub use objects::LevelObj;
-pub use objects::LevelObject;
-use objects::ObjRequest;
+pub use objects::Obj;
+pub use objects::Object;
+use objects::Request;
 
 type Point = (usize, usize); // (x, y)
 
-pub enum LevelState {
+pub enum State {
     Win,
     Lose,
 }
 
-pub struct LevelUpdate<'a> {
+pub struct Update<'a> {
     pub score: usize,
     pub max_score: usize,
-    pub state: Option<LevelState>,
-    pub damaged: Vec<(Point, Option<&'a LevelObject>)>,
+    pub state: Option<State>,
+    pub damaged: Vec<(Point, Option<&'a Object>)>,
 }
 
 #[derive(Default)]
 pub struct Level {
     score: usize,
     max_score: usize,
-    state: Option<LevelState>,
+    state: Option<State>,
     player: Point,
     rocks: HashSet<Point>,
     damaged: HashSet<Point>,
-    objects: HashMap<Point, LevelObject>,
+    objects: HashMap<Point, Object>,
 }
 
 impl Level {
@@ -47,8 +47,8 @@ impl Level {
         Ok(level)
     }
 
-    fn get_update(&mut self) -> LevelUpdate {
-        LevelUpdate {
+    pub fn get_update(&mut self) -> Update {
+        Update {
             state: self.state.take(),
             score: self.score,
             max_score: self.max_score,
@@ -59,17 +59,17 @@ impl Level {
         }
     }
 
-    fn handle_request(&mut self, request: Option<ObjRequest>) {
+    fn handle_request(&mut self, request: Option<Request>) {
         if let Some(request) = request {
             match request {
-                ObjRequest::AddScore => self.score += 1,
-                ObjRequest::AddMaxScore => self.max_score += 1,
-                ObjRequest::GameLost => self.state = Some(LevelState::Lose),
+                Request::AddScore => self.score += 1,
+                Request::AddMaxScore => self.max_score += 1,
+                Request::GameLost => self.state = Some(State::Lose),
             }
         }
     }
 
-    fn add_obj(&mut self, point: Point, obj: LevelObject) {
+    fn add_obj(&mut self, point: Point, obj: Object) {
         if obj.rock() {
             self.rocks.insert(point);
         } else if obj.player() {
@@ -80,22 +80,24 @@ impl Level {
         self.objects.insert(point, obj);
     }
 
-    fn rem_obj(&mut self, point: &Point) -> Option<LevelObject> {
-        let obj = self.objects.get(&point)?;
+    fn rem_obj(&mut self, point: &Point, handle: bool) -> Option<Object> {
+        let obj = self.objects.get(point)?;
         if obj.rock() {
-            self.rocks.remove(&point);
+            self.rocks.remove(point);
         }
-        self.handle_request(obj.on_broken());
+        if handle {
+            self.handle_request(obj.on_broken());
+        }
 
-        self.damaged.insert(point.clone());
-        self.objects.remove(&point)
+        self.damaged.insert(*point);
+        self.objects.remove(point)
     }
 
     fn move_obj(&mut self, point: &Point, dir: &Dir) {
-        let dir_point = dir.apply_to(&point);
-        self.rem_obj(&dir_point);
+        let dir_point = dir.apply_to(point);
+        self.rem_obj(&dir_point, true);
 
-        if let Some(obj) = self.rem_obj(point) {
+        if let Some(obj) = self.rem_obj(point, false) {
             self.add_obj(dir_point, obj);
         }
     }
@@ -110,7 +112,7 @@ impl Level {
         true
     }
 
-    pub fn tick(&mut self, direction: Option<Dir>) -> LevelUpdate {
+    pub fn tick(&mut self, direction: Option<Dir>) -> Update {
         let mut can_break_player = true;
 
         if let Some(dir) = direction {
@@ -166,8 +168,8 @@ pub enum Dir {
 impl Dir {
     const fn get_values(&self) -> (isize, isize) {
         match self {
-            Self::Up => (0, 1),
-            Self::Down => (0, -1),
+            Self::Up => (0, -1),
+            Self::Down => (0, 1),
             Self::Left => (-1, 0),
             Self::Right => (1, 0),
         }

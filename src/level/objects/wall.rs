@@ -1,9 +1,9 @@
-use super::LevelObj;
+use super::Obj;
 
 pub struct Wall;
 
-impl LevelObj for Wall {
+impl Obj for Wall {
     fn char(&self) -> &str {
-        "🧱"
+        "#"
     }
 }

@@ -13,7 +13,7 @@ use rock::Rock;
 use wall::Wall;
 
 #[enum_dispatch]
-pub enum LevelObject {
+pub enum Object {
     Gem,
     Wall,
     Dirt,
@@ -21,20 +21,20 @@ pub enum LevelObject {
     Player,
 }
 
-pub enum ObjRequest {
+pub enum Request {
     AddScore,
     AddMaxScore,
     GameLost,
 }
 
-#[enum_dispatch(LevelObject)]
-pub trait LevelObj {
+#[enum_dispatch(Object)]
+pub trait Obj {
     fn char(&self) -> &str;
 
-    fn init(&self) -> Option<ObjRequest> {
+    fn init(&self) -> Option<Request> {
         None
     }
-    fn on_broken(&self) -> Option<ObjRequest> {
+    fn on_broken(&self) -> Option<Request> {
         None
     }
 
@@ -49,7 +49,7 @@ pub trait LevelObj {
     }
 }
 
-pub fn parse(chr: char) -> Result<LevelObject, String> {
+pub fn parse(chr: char) -> Result<Object, String> {
     Ok(match chr {
         'g' => Gem.into(),
         '#' => Wall.into(),
