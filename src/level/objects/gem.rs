@@ -12,7 +12,7 @@ impl Obj for Gem {
     fn on_broken(&self) -> Option<Request> {
         Some(Request::AddScore)
     }
-    fn char(&self) -> &str {
-        "💎"
+    fn char(&self) -> char {
+        '💎'
     }
 }

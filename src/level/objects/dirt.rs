@@ -6,7 +6,7 @@ impl Obj for Dirt {
     fn breakable(&self) -> bool {
         true
     }
-    fn char(&self) -> &str {
-        "🟨"
+    fn char(&self) -> char {
+        '🟨'
     }
 }

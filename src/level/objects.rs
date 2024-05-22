@@ -32,7 +32,7 @@ pub enum Request {
 
 #[enum_dispatch(Object)]
 pub trait Obj {
-    fn char(&self) -> &str;
+    fn char(&self) -> char;
 
     fn init(&self) -> Option<Request> {
         None

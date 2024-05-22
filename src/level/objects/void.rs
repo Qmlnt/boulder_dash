@@ -6,7 +6,7 @@ impl Obj for Void {
     fn void(&self) -> bool {
         true
     }
-    fn char(&self) -> &str {
-        "　"
+    fn char(&self) -> char {
+        '　'
     }
 }
