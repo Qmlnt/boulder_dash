@@ -1,24 +1,41 @@
-use crate::Level;
-use crate::Obj;
 use console::Term;
+use std::io;
 
-pub fn tui(level: &Level, console: &mut Term) {
-    console.clear_screen().unwrap();
+use super::level;
+use level::Obj;
 
-    for row in level.matrix.iter() {
+pub fn tui(level: &level::Update) -> io::Result<()> {
+    let out = Term::stdout();
+
+    out.clear_screen()?;
+    out.hide_cursor()?;
+
+    for row in level.matrix {
         let mut line = String::new();
         for obj in row {
-            let chr = match obj {
-                Obj::Gem => '🍏', //'💎',
-                Obj::Void => '　',
-                Obj::Dirt => '🟫',
-                Obj::Rock => '🪨',
-                Obj::Wall => '🧱',
-                Obj::Player => '🐷', //'🤵',
-            };
-            line.push(chr);
+            line.push(obj.char());
         }
-        console.write_line(&line).unwrap();
+        out.write_line(&line)?;
     }
-    println!("\nScore: {}/{}", level.score, level.gems);
+
+    let status_msg = match level.state {
+        Some(level::State::Win) => "You have won!".to_string(),
+        Some(level::State::Lose) => "You have lost!".to_string(),
+        None => format!("\nScore: {}/{}", level.score, level.max_score),
+    };
+
+    out.write_line(&status_msg)?;
+
+    // out.move_cursor_down(999)?; // bottom
+    // out.write_line(&lines)?;
+    // out.move_cursor_up(1)?;
+    // out.move_cursor_to(0, 0)?;
+    // out.move_cursor_to(x, y)?;
+    // out.write_line(obj.map_or(" ", |o| o.char()))?;
+
+    Ok(())
 }
+
+// pub fn gui(level: &Update) {
+//     todo!();
+// }

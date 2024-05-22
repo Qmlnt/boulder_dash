@@ -11,13 +11,14 @@ OPTIONS:
         Show this message.\
 ";
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum AppMode {
+    #[default]
     Tui,
     Gui,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Config {
     pub delay: u64,
     pub app_mode: AppMode,
@@ -28,7 +29,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             delay: 1000,
-            app_mode: AppMode::Tui,
+            app_mode: AppMode::default(),
             level_paths: Vec::new(),
         }
     }
@@ -38,12 +39,15 @@ impl Config {
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut cfg = Self::default();
 
-        let parse_num = |num: Option<String>, name| match num {
-            Some(val_str) => match val_str.parse::<u64>() {
-                Ok(val) => Ok(val),
-                Err(_) => Err(format!("Invalid `{name}` value!")),
-            },
-            None => Err(format!("Missing `{name}` value!")),
+        let parse_num = |var_str: Option<String>, var_name| {
+            var_str.map_or_else(
+                || Err(format!("Missing `{var_name}` value!")),
+                |num_str| {
+                    num_str
+                        .parse()
+                        .map_or_else(|_| Err(format!("Invalid `{var_name}` value!")), Ok)
+                },
+            )
         };
 
         while let Some(arg) = args.next() {
