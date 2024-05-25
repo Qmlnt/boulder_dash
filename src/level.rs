@@ -36,7 +36,7 @@ impl Level {
 
             for chr in line.chars() {
                 let obj = objects::parse(chr)?;
-                level.handle_request(obj.init());
+                level.handle_requests(obj.init());
                 if obj.player() {
                     level.player = (row.len(), level.matrix.len());
                 }
@@ -58,12 +58,18 @@ impl Level {
         }
     }
 
-    fn handle_request(&mut self, request: Option<Request>) {
-        if let Some(request) = request {
+    fn handle_requests(&mut self, requests: Vec<Request>) {
+        for request in requests {
             match request {
+                Request::UpdateState(state) => {
+                    if self.state.is_none() {
+                        self.state = Some(state);
+                    }
+                }
+
                 Request::AddScore => self.score += 1,
                 Request::AddMaxScore => self.max_score += 1,
-                Request::GameLost => self.state = Some(State::Lose),
+                Request::MoveObj(from, to) => self.move_obj(from, to),
             }
         }
     }
@@ -73,6 +79,10 @@ impl Level {
     }
 
     fn move_obj(&mut self, from: Point, to: Point) {
+        if self.get_obj(from).player() {
+            self.player = to;
+        }
+
         self.matrix[to.1][to.0] = std::mem::replace(
             &mut self.matrix[from.1][from.0],
             objects::parse(' ').expect("new Void object"),
@@ -80,59 +90,16 @@ impl Level {
     }
 
     pub fn tick(&mut self, direction: Option<Dir>) {
-        // to prevent the rock from falling on player when object underneath is broken
-        let mut player_broke = false;
-
         // Player
-        if let Some(dir) = direction {
-            let next_point = dir.apply_to(&self.player);
-
-            player_broke = self.get_obj(next_point).breakable();
-            let move_next = matches!(dir, Dir::Left | Dir::Right)
-                && self.get_obj(next_point).rock()
-                && self.get_obj(dir.apply_to(&next_point)).void();
-
-            if player_broke {
-                self.handle_request(self.get_obj(next_point).on_broken());
-            } else if move_next {
-                self.move_obj(next_point, dir.apply_to(&next_point));
-            }
-
-            if self.get_obj(next_point).void() || player_broke || move_next {
-                self.move_obj(self.player, next_point);
-                self.player = next_point;
-            }
-        }
-
-        // Check the rock above
-        let above_point = Dir::Up.apply_to(&self.player);
-        if !player_broke && self.get_obj(above_point).rock() {
-            self.state = Some(State::Lose);
-            self.move_obj(above_point, self.player);
-        }
+        self.handle_requests(self.get_obj(self.player).tick(self, self.player, direction));
 
         // Rocks
         for y in (0..self.matrix.len()).rev() {
             for x in 0..self.matrix[y].len() {
-                if !self.get_obj((x, y)).rock() || (x, y) == self.player || (x, y) == above_point {
-                    continue;
-                }
-
-                if self.get_obj((x, y + 1)).void() {
-                    self.move_obj((x, y), (x, y + 1));
-                } else {
-                    for side in [x - 1, x + 1] {
-                        if self.get_obj((side, y)).void() && self.get_obj((side, y + 1)).void() {
-                            self.move_obj((x, y), (side, y + 1));
-                            break;
-                        }
-                    }
+                if self.get_obj((x, y)).rock() {
+                    self.handle_requests(self.get_obj((x, y)).tick(self, (x, y), None));
                 }
             }
-        }
-
-        if self.score == self.max_score {
-            self.state = Some(State::Win);
         }
     }
 }
