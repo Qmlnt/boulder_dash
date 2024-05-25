@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fs::read_link;
 use std::{fs, process};
 use std::{thread, time::Duration};
 
@@ -29,21 +28,21 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
 
     for (mut level, path) in levels {
         let mut paused = false;
+        let mut launch_pause = true;
 
         draw::tui(&level.get_update())?;
-        thread::sleep(Duration::from_secs(1));
 
         loop {
             thread::sleep(Duration::from_millis(config.delay));
-
+            // TODO: adjust the speed
             let mut direction = None;
             match input::read_term(&input_receiver) {
                 Input::Unknown => (),
                 Input::Quit => process::exit(0),
                 Input::Reload => {
+                    launch_pause = true;
                     level = read_level(path)?;
                     draw::tui(&level.get_update())?;
-                    thread::sleep(Duration::from_secs(1));
                 }
                 Input::Esc | Input::Space => paused = !paused,
 
@@ -53,7 +52,11 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
                 Input::Right => direction = Some(Dir::Right),
             }
 
-            if paused && direction.is_none() {
+            if launch_pause && direction.is_some() {
+                launch_pause = false;
+            }
+
+            if (paused && direction.is_none()) || launch_pause {
                 continue;
             }
 

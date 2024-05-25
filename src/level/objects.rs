@@ -14,6 +14,8 @@ use rock::Rock;
 use void::Void;
 use wall::Wall;
 
+use super::{Dir, Level, Point, State};
+
 #[enum_dispatch]
 pub enum Object {
     Gem,
@@ -27,31 +29,34 @@ pub enum Object {
 pub enum Request {
     AddScore,
     AddMaxScore,
-    GameLost,
+    UpdateState(State),
+    MoveObj(Point, Point),
 }
 
 #[enum_dispatch(Object)]
 pub trait Obj {
     fn char(&self) -> char;
 
-    fn init(&self) -> Option<Request> {
-        None
+    fn init(&self) -> Vec<Request> {
+        vec![]
     }
-    fn on_broken(&self) -> Option<Request> {
-        None
+    fn on_broken(&self, _: &Level) -> Vec<Request> {
+        vec![]
+    }
+    fn tick(&self, _: &Level, _: Point, _: Option<Dir>) -> Vec<Request> {
+        vec![]
     }
 
-    fn rock(&self) -> bool {
-        false
-    }
-
-    fn breakable(&self) -> bool {
-        false
-    }
     fn void(&self) -> bool {
         false
     }
+    fn rock(&self) -> bool {
+        false
+    }
     fn player(&self) -> bool {
+        false
+    }
+    fn breakable(&self) -> bool {
         false
     }
 }
