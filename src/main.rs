@@ -9,7 +9,7 @@ fn main() {
         process::exit(1);
     });
 
-    if let Err(err) = boulder_dash::run(&config) {
+    if let Err(err) = boulder_dash::run(config) {
         eprintln!("Application error: {err}");
         process::exit(1);
     }

@@ -4,6 +4,8 @@ FLAGS:
         Launch GUI mode.
     -t, --tui
         Launch TUI mode. (default)
+    -p, --pause
+        Launch paused.
 OPTIONS:
     -d, --delay <integer>
         Delay between frames. (default: 1000ms)
@@ -20,7 +22,8 @@ pub enum AppMode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Config {
-    pub delay: u64,
+    pub delay: u16,
+    pub pause: bool,
     pub app_mode: AppMode,
     pub level_paths: Vec<String>,
 }
@@ -29,12 +32,14 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             delay: 1000,
+            pause: false,
             app_mode: AppMode::default(),
-            level_paths: Vec::new(),
+            level_paths: vec![],
         }
     }
 }
 
+// TODO: read from file
 impl Config {
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut cfg = Self::default();
@@ -56,6 +61,7 @@ impl Config {
                     println!("{HELP_MSG}");
                     std::process::exit(0);
                 }
+                "-p" | "--pause" => cfg.pause = true,
                 "-g" | "--gui" => cfg.app_mode = AppMode::Gui,
                 "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
                 "-d" | "--delay" => cfg.delay = parse_num(args.next(), "delay")?,

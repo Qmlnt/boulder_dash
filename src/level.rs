@@ -5,7 +5,7 @@ use objects::Request;
 
 type Point = (usize, usize); // (x, y)
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum State {
     Win,
     Lose,
@@ -14,7 +14,7 @@ pub enum State {
 pub struct Update<'a> {
     pub score: usize,
     pub max_score: usize,
-    pub state: Option<State>,
+    pub state: Option<&'a State>,
     pub matrix: &'a Vec<Vec<Object>>,
 }
 
@@ -49,11 +49,11 @@ impl Level {
         Ok(level)
     }
 
-    pub fn get_update(&self) -> Update {
+    pub const fn get_update(&self) -> Update {
         Update {
             score: self.score,
             max_score: self.max_score,
-            state: self.state.clone(),
+            state: self.state.as_ref(),
             matrix: &self.matrix,
         }
     }
