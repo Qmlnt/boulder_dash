@@ -1,4 +1,5 @@
 use enum_dispatch::enum_dispatch;
+use std::path::Path;
 
 mod dirt;
 mod gem;
@@ -15,6 +16,7 @@ use void::Void;
 use wall::Wall;
 
 use super::{Dir, Level, Point, State};
+use sdl2::{image::LoadSurface, surface::Surface};
 
 #[enum_dispatch]
 pub enum Object {
@@ -36,6 +38,9 @@ pub enum Request {
 #[enum_dispatch(Object)]
 pub trait Obj {
     fn char(&self) -> char;
+    fn sprite(&self) -> Result<Surface, String> {
+        Surface::from_file(Path::new(&format!("assets/sprites/{}.png", self.char())))
+    }
 
     fn init(&self) -> Vec<Request> {
         vec![]

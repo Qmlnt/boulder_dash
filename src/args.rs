@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 const HELP_MSG: &str = "\
 FLAGS:
     -g, --gui
@@ -13,28 +15,27 @@ OPTIONS:
         Show this message.\
 ";
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AppMode {
-    #[default]
     Tui,
     Gui,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Config {
-    pub delay: u16,
     pub pause: bool,
     pub app_mode: AppMode,
+    pub delay: Duration,
     pub level_paths: Vec<String>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            delay: 1000,
             pause: false,
-            app_mode: AppMode::default(),
             level_paths: vec![],
+            app_mode: AppMode::Tui,
+            delay: Duration::from_millis(1000),
         }
     }
 }
@@ -62,9 +63,12 @@ impl Config {
                     std::process::exit(0);
                 }
                 "-p" | "--pause" => cfg.pause = true,
-                "-g" | "--gui" => cfg.app_mode = AppMode::Gui,
                 "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
-                "-d" | "--delay" => cfg.delay = parse_num(args.next(), "delay")?,
+                "-g" | "--gui" => cfg.app_mode = AppMode::Gui,
+                "-d" | "--delay" => {
+                    cfg.delay = Duration::from_millis(parse_num(args.next(), "delay")?);
+                }
+
                 _ => cfg.level_paths.push(arg),
             }
         }
