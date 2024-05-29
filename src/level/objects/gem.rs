@@ -3,9 +3,20 @@ use super::{Level, Obj, Request, State};
 pub struct Gem;
 
 impl Obj for Gem {
+    fn char(&self) -> char {
+        '+'
+    }
+    fn emoji(&self) -> char {
+        '💎'
+    }
+    fn name(&self) -> &str {
+        "gem"
+    }
+
     fn breakable(&self) -> bool {
         true
     }
+
     fn init(&self) -> Vec<Request> {
         vec![Request::AddMaxScore]
     }
@@ -16,8 +27,5 @@ impl Obj for Gem {
         }
 
         requests
-    }
-    fn char(&self) -> char {
-        '💎'
     }
 }
