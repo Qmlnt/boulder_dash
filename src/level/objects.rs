@@ -38,19 +38,8 @@ pub enum Request {
 #[enum_dispatch(Object)]
 pub trait Obj {
     fn char(&self) -> char;
-    fn sprite(&self) -> Result<Surface, String> {
-        Surface::from_file(Path::new(&format!("assets/sprites/{}.png", self.char())))
-    }
-
-    fn init(&self) -> Vec<Request> {
-        vec![]
-    }
-    fn on_broken(&self, _: &Level) -> Vec<Request> {
-        vec![]
-    }
-    fn tick(&self, _: &Level, _: Point, _: Option<Dir>) -> Vec<Request> {
-        vec![]
-    }
+    fn emoji(&self) -> char;
+    fn name(&self) -> &str;
 
     fn void(&self) -> bool {
         false
@@ -63,6 +52,21 @@ pub trait Obj {
     }
     fn breakable(&self) -> bool {
         false
+    }
+
+    // TODO that's messed up
+    fn sprite(&self) -> Result<Surface, String> {
+        Surface::from_file(Path::new(&format!("assets/sprites/{}.png", self.name())))
+    }
+
+    fn init(&self) -> Vec<Request> {
+        vec![]
+    }
+    fn on_broken(&self, _: &Level) -> Vec<Request> {
+        vec![]
+    }
+    fn tick(&self, _: &Level, _: Point, _: Option<Dir>) -> Vec<Request> {
+        vec![]
     }
 }
 

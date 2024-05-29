@@ -5,11 +5,11 @@ use std::{
 };
 
 mod args;
-mod interaction;
+mod modes;
 mod level;
 
 pub use args::Config;
-use interaction::{Gui, Input, Interaction, Mode, Tui};
+use modes::{Input, Interaction, Mode};
 use level::{Dir, Level, State};
 
 fn read_level(path: &str) -> Result<Level, Box<dyn Error>> {
@@ -24,10 +24,7 @@ pub fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
         levels.push((read_level(path)?, path.clone()));
     }
 
-    let mut mode = match config.app_mode {
-        args::AppMode::Tui => Tui::new().into(),
-        args::AppMode::Gui => Gui::new()?.into(),
-    };
+    let mut mode = modes::get_mode(&config.app_mode)?;
 
     for (level, path) in levels {
         let state = run_level(level, &path, &mut config, &mut mode)?;
@@ -43,30 +40,22 @@ pub fn run_level(
     mut level: Level,
     level_path: &str,
     config: &mut Config,
-    mode: &mut Mode,
+    display_mode: &mut Mode,
 ) -> Result<State, Box<dyn Error>> {
     let mut launch_pause = true;
     let mut direction = None;
     let mut timer = Instant::now();
 
+    display_mode.draw(level.get_update(), config)?;
+
     loop {
-        let update = &level.get_update();
-        mode.draw(update, config)?;
-
-        if let Some(state) = update.state {
-            return Ok(state.clone());
-        }
-
-        thread::sleep(Duration::from_millis(10));
-
-        let inp = mode.get_input();
-        match inp {
-            Input::Unknown => (),
+        let mut input = true;
+        match display_mode.get_input() {
+            Input::Unknown => input = false,
             Input::Quit => process::exit(0),
             Input::Reload => {
                 launch_pause = true;
                 level = read_level(level_path)?;
-                continue;
             }
             Input::DelayDown => {
                 if config.delay.as_millis() >= 100 {
@@ -92,13 +81,20 @@ pub fn run_level(
             if direction.is_some() {
                 launch_pause = false;
             }
-
             if (config.pause && direction.is_none()) || launch_pause {
                 continue;
             }
 
-            level.tick(direction);
-            direction = None;
+            level.tick(direction.take());
+            display_mode.draw(level.get_update(), config)?;
+
+            if let Some(state) = level.get_state() {
+                return Ok(state);
+            }
+        } else if input {
+            display_mode.draw(level.get_update(), config)?;
         }
+
+        thread::sleep(Duration::from_millis(10));
     }
 }

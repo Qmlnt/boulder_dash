@@ -3,11 +3,18 @@ use super::{Dir, Level, Obj, Point, Request, State};
 pub struct Player;
 
 impl Obj for Player {
+    fn char(&self) -> char {
+        'p'
+    }
+    fn emoji(&self) -> char {
+        '🦀'
+    }
+    fn name(&self) -> &str {
+        "player"
+    }
+
     fn player(&self) -> bool {
         true
-    }
-    fn char(&self) -> char {
-        '🦀'
     }
 
     fn tick(&self, level: &Level, _: Point, direction: Option<Dir>) -> Vec<Request> {

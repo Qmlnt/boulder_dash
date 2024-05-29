@@ -3,11 +3,18 @@ use super::{Dir, Level, Obj, Point, Request};
 pub struct Rock;
 
 impl Obj for Rock {
+    fn char(&self) -> char {
+        'O'
+    }
+    fn emoji(&self) -> char {
+        '🪨'
+    }
+    fn name(&self) -> &str {
+        "rock"
+    }
+
     fn rock(&self) -> bool {
         true
-    }
-    fn char(&self) -> char {
-        '🪨'
     }
 
     fn tick(&self, level: &Level, (x, y): Point, _: Option<Dir>) -> Vec<Request> {

@@ -6,6 +6,8 @@ FLAGS:
         Launch GUI mode.
     -t, --tui
         Launch TUI mode. (default)
+    -c, --cli
+        TUI mode with damaged tracking.
     -p, --pause
         Launch paused.
 OPTIONS:
@@ -17,8 +19,9 @@ OPTIONS:
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AppMode {
-    Tui,
     Gui,
+    Tui,
+    Cli,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -63,8 +66,9 @@ impl Config {
                     std::process::exit(0);
                 }
                 "-p" | "--pause" => cfg.pause = true,
-                "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
                 "-g" | "--gui" => cfg.app_mode = AppMode::Gui,
+                "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
+                "-c" | "--cli" => cfg.app_mode = AppMode::Cli,
                 "-d" | "--delay" => {
                     cfg.delay = Duration::from_millis(parse_num(args.next(), "delay")?);
                 }

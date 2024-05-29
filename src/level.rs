@@ -14,6 +14,7 @@ pub enum State {
 pub struct Update<'a> {
     pub score: usize,
     pub max_score: usize,
+    pub damaged: Vec<Point>,
     pub state: Option<&'a State>,
     pub matrix: &'a Vec<Vec<Object>>,
 }
@@ -24,6 +25,7 @@ pub struct Level {
     max_score: usize,
     state: Option<State>,
     player: Point,
+    damaged: Vec<Point>,
     matrix: Vec<Vec<Object>>,
 }
 
@@ -31,16 +33,17 @@ impl Level {
     pub fn parse(string: &str) -> Result<Self, String> {
         let mut level = Self::default();
 
-        for line in string.lines() {
+        for (y, line) in string.lines().enumerate() {
             let mut row = vec![];
 
-            for chr in line.chars() {
+            for (x, chr) in line.chars().enumerate() {
                 let obj = objects::parse(chr)?;
                 level.handle_requests(obj.init());
                 if obj.player() {
-                    level.player = (row.len(), level.matrix.len());
+                    level.player = (x, y);
                 }
 
+                level.damaged.push((x, y));
                 row.push(obj);
             }
             level.matrix.push(row);
@@ -49,13 +52,18 @@ impl Level {
         Ok(level)
     }
 
-    pub const fn get_update(&self) -> Update {
+    pub fn get_update(&mut self) -> Update {
         Update {
             score: self.score,
             max_score: self.max_score,
             state: self.state.as_ref(),
+            damaged: std::mem::take(&mut self.damaged),
             matrix: &self.matrix,
         }
+    }
+
+    pub fn get_state(&self) -> Option<State> {
+        self.state.clone()
     }
 
     fn handle_requests(&mut self, requests: Vec<Request>) {
@@ -66,10 +74,16 @@ impl Level {
                         self.state = Some(state);
                     }
                 }
-
                 Request::AddScore => self.score += 1,
                 Request::AddMaxScore => self.max_score += 1,
-                Request::MoveObj(from, to) => self.move_obj(from, to),
+                Request::MoveObj(from, to) => {
+                    if self.get_obj(from).player() {
+                        self.player = to;
+                    }
+
+                    self.move_obj(from, to);
+                    self.damaged.extend([from, to]);
+                }
             }
         }
     }
@@ -79,10 +93,6 @@ impl Level {
     }
 
     fn move_obj(&mut self, from: Point, to: Point) {
-        if self.get_obj(from).player() {
-            self.player = to;
-        }
-
         self.matrix[to.1][to.0] = std::mem::replace(
             &mut self.matrix[from.1][from.0],
             objects::parse(' ').expect("new Void object"),

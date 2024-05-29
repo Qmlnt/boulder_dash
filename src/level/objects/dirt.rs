@@ -7,6 +7,12 @@ impl Obj for Dirt {
         true
     }
     fn char(&self) -> char {
+        '*'
+    }
+    fn name(&self) -> &str {
+        "dirt"
+    }
+    fn emoji(&self) -> char {
         '🟨'
     }
 }
