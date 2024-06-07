@@ -9,9 +9,9 @@ use cli::Cli;
 use gui::Gui;
 use tui::Tui;
 
-use super::{
+use crate::{
     args::{AppMode, Config},
-    level::Update,
+    level::Level, //objects::Object,
 };
 
 #[enum_dispatch]
@@ -40,7 +40,16 @@ pub enum Input {
 #[enum_dispatch(Mode)]
 pub trait Interaction {
     fn get_input(&mut self) -> Input;
-    fn draw(&mut self, level: Update, config: &Config) -> Result<(), Box<dyn Error>>;
+    fn draw(&mut self, level: &mut Level, config: &Config) -> Result<(), Box<dyn Error>>;
+}
+
+#[enum_dispatch(Object)]
+pub trait Labels: std::fmt::Debug {
+    fn char(&self) -> char;
+    fn emoji(&self) -> char;
+    fn name(&self) -> String {
+        format!("{self:?}").to_lowercase()
+    }
 }
 
 pub fn get_mode(app_mode: &AppMode) -> Result<Mode, String> {

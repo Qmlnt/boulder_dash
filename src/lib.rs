@@ -7,6 +7,7 @@ use std::{
 mod args;
 mod level;
 mod modes;
+mod objects;
 
 pub use args::Config;
 use level::{Direction, Level, State};
@@ -47,7 +48,7 @@ pub fn run_level(
     let mut direction = None;
     let mut timer = Instant::now();
 
-    display_mode.draw(level.get_update(), config)?;
+    display_mode.draw(&mut level, config)?;
 
     loop {
         let mut input = true;
@@ -87,13 +88,13 @@ pub fn run_level(
             }
 
             level.tick(direction.take());
-            display_mode.draw(level.get_update(), config)?;
+            display_mode.draw(&mut level, config)?;
 
             if let Some(state) = level.get_state() {
-                return Ok(state);
+                return Ok(state.clone());
             }
         } else if input {
-            display_mode.draw(level.get_update(), config)?;
+            display_mode.draw(&mut level, config)?;
         }
 
         thread::sleep(Duration::from_millis(10));

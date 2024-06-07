@@ -1,7 +1,7 @@
-use super::{Input, Interaction};
+use super::{Input, Interaction, Labels};
 use crate::{
     args::Config,
-    level::{Labels, State, Update},
+    level::{Level, State},
 };
 use console::{Key, Term};
 use std::{error::Error, sync::mpsc, thread};
@@ -56,10 +56,10 @@ impl Interaction for Tui {
         })
     }
 
-    fn draw(&mut self, level: Update, config: &Config) -> Result<(), Box<dyn Error>> {
+    fn draw(&mut self, level: &mut Level, config: &Config) -> Result<(), Box<dyn Error>> {
         self.term.clear_screen()?;
 
-        for row in level.matrix {
+        for row in level.get_objects() {
             let mut line = String::new();
             for obj in row {
                 line.push(obj.emoji());
@@ -67,13 +67,13 @@ impl Interaction for Tui {
             self.term.write_line(&line)?;
         }
 
-        let status_msg = match level.state {
+        let status_msg = match level.get_state() {
             Some(State::Win) => "You have won!".to_string(),
             Some(State::Lose) => "You have lost!".to_string(),
             None => format!(
                 "\nScore: {}/{}\nDelay: {}ms\nPaused: {}",
-                level.score,
-                level.max_score,
+                level.get_score(),
+                level.get_max_score(),
                 config.delay.as_millis(),
                 if config.pause { "yes" } else { "no" }
             ),

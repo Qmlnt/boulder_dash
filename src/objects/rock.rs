@@ -20,16 +20,19 @@ impl Properties for Rock {
 
 impl Behaviour for Rock {
     fn tick(&self, level: &Level, (x, y): Point, _: Option<Direction>) -> Vec<Request> {
-        if (x, y) == level.player || (x, y) == Direction::Up.apply_to(&level.player) {
+        if (x, y) == *level.get_player_pos()
+            || (x, y) == Direction::Up.apply_to(level.get_player_pos())
+        {
             return vec![];
         }
 
-        if level.get_obj((x, y + 1)).placeholder() {
+        if level.get_object((x, y + 1)).placeholder() {
             return vec![Request::MoveObj((x, y), (x, y + 1))];
         }
 
         for side in [x - 1, x + 1] {
-            if level.get_obj((side, y)).placeholder() && level.get_obj((side, y + 1)).placeholder()
+            if level.get_object((side, y)).placeholder()
+                && level.get_object((side, y + 1)).placeholder()
             {
                 return vec![Request::MoveObj((x, y), (side, y + 1))];
             }

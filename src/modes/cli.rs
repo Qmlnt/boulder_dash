@@ -1,7 +1,7 @@
-use super::{Input, Interaction, Tui};
+use super::{Input, Interaction, Labels, Tui};
 use crate::{
     args::Config,
-    level::{Labels, State, Update},
+    level::{Level, State},
 };
 use std::error::Error;
 
@@ -29,20 +29,20 @@ impl Interaction for Cli {
         self.tui.get_input()
     }
 
-    fn draw(&mut self, level: Update, config: &Config) -> Result<(), Box<dyn Error>> {
-        for (x, y) in level.damaged {
+    fn draw(&mut self, level: &mut Level, config: &Config) -> Result<(), Box<dyn Error>> {
+        for (x, y) in level.get_damaged() {
             self.tui.get_term().move_cursor_to(x, y)?;
-            let char = level.matrix[y][x].char().to_string();
+            let char = level.get_object((x, y)).char().to_string();
             self.tui.get_term().write_line(&char)?;
         }
 
-        let status_msg = match level.state {
+        let status_msg = match level.get_state() {
             Some(State::Win) => "You have won!".to_string(),
             Some(State::Lose) => "You have lost!".to_string(),
             None => format!(
                 "\nScore: {}/{}   \nDelay: {}ms   \nPaused: {}   ",
-                level.score,
-                level.max_score,
+                level.get_score(),
+                level.get_max_score(),
                 config.delay.as_millis(),
                 if config.pause { "yes" } else { "no" }
             ),

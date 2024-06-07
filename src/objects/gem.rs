@@ -24,7 +24,7 @@ impl Behaviour for Gem {
     }
     fn on_broken(&self, level: &Level) -> Vec<Request> {
         let mut requests = vec![Request::AddScore];
-        if level.score + 1 == level.max_score {
+        if level.get_score() + 1 == *level.get_max_score() {
             requests.push(Request::UpdateState(State::Win));
         }
 

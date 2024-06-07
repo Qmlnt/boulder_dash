@@ -1,8 +1,5 @@
-use super::{Input, Interaction};
-use crate::{
-    args::Config,
-    level::{Labels, Update},
-};
+use super::{Input, Interaction, Labels};
+use crate::{args::Config, level::Level};
 use sdl2::{
     event::Event,
     image::LoadTexture,
@@ -80,11 +77,11 @@ impl Interaction for Gui {
         input
     }
 
-    fn draw(&mut self, level: Update, _config: &Config) -> Result<(), Box<dyn Error>> {
+    fn draw(&mut self, level: &mut Level, _config: &Config) -> Result<(), Box<dyn Error>> {
         //self.canvas.set_draw_color(Color::RGB(0, 122, 255));
         self.canvas.clear();
 
-        for (row, y) in level.matrix.iter().zip(0i32..) {
+        for (row, y) in level.get_objects().iter().zip(0i32..) {
             for (obj, x) in row.iter().zip(0i32..) {
                 let texture = self
                     .texture_creator
