@@ -1,7 +1,7 @@
 use super::{Input, Interaction};
 use crate::{
     args::Config,
-    level::{Obj, State, Update},
+    level::{Labels, State, Update},
 };
 use console::{Key, Term};
 use std::{error::Error, sync::mpsc, thread};
@@ -22,9 +22,9 @@ impl Tui {
         let (input_tx, input_rx) = mpsc::channel();
 
         let term = Term::stdout();
-        let stdin = term.clone();
+        let term_moved = term.clone();
         thread::spawn(move || loop {
-            let key = stdin.read_key().expect("Should always get a key");
+            let key = term_moved.read_key().expect("Should always get a key");
             input_tx.send(key).expect("Receiver should be present");
         });
 

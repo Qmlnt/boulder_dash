@@ -1,7 +1,7 @@
 use super::{Input, Interaction, Tui};
 use crate::{
     args::Config,
-    level::{Obj, State, Update},
+    level::{Labels, State, Update},
 };
 use std::error::Error;
 
@@ -35,7 +35,6 @@ impl Interaction for Cli {
             let char = level.matrix[y][x].char().to_string();
             self.tui.get_term().write_line(&char)?;
         }
-        self.tui.get_term().move_cursor_down(99)?;
 
         let status_msg = match level.state {
             Some(State::Win) => "You have won!".to_string(),
@@ -48,6 +47,8 @@ impl Interaction for Cli {
                 if config.pause { "yes" } else { "no" }
             ),
         };
+
+        self.tui.get_term().move_cursor_down(99)?;
         self.tui
             .get_term()
             .move_cursor_up(status_msg.lines().count())?;

@@ -1,18 +1,21 @@
-use super::Obj;
+use super::{Behaviour, Labels, Properties};
 
+#[derive(Debug)]
 pub struct Dirt;
 
-impl Obj for Dirt {
-    fn breakable(&self) -> bool {
-        true
-    }
+impl Labels for Dirt {
     fn char(&self) -> char {
         '*'
-    }
-    fn name(&self) -> &str {
-        "dirt"
     }
     fn emoji(&self) -> char {
         '🟨'
     }
 }
+
+impl Properties for Dirt {
+    fn can_be_broken(&self) -> bool {
+        true
+    }
+}
+
+impl Behaviour for Dirt {}

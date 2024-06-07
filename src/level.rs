@@ -1,7 +1,5 @@
 mod objects;
-pub use objects::Obj;
-pub use objects::Object;
-use objects::Request;
+pub use objects::{Behaviour, Labels, Object, Properties, Request};
 
 type Point = (usize, usize); // (x, y)
 
@@ -12,10 +10,10 @@ pub enum State {
 }
 
 pub struct Update<'a> {
-    pub score: usize,
-    pub max_score: usize,
-    pub damaged: Vec<Point>,
+    pub score: &'a usize,
+    pub max_score: &'a usize,
     pub state: Option<&'a State>,
+    pub damaged: Vec<Point>,
     pub matrix: &'a Vec<Vec<Object>>,
 }
 
@@ -54,8 +52,8 @@ impl Level {
 
     pub fn get_update(&mut self) -> Update {
         Update {
-            score: self.score,
-            max_score: self.max_score,
+            score: &self.score,
+            max_score: &self.max_score,
             state: self.state.as_ref(),
             damaged: std::mem::take(&mut self.damaged),
             matrix: &self.matrix,
@@ -93,20 +91,18 @@ impl Level {
     }
 
     fn move_obj(&mut self, from: Point, to: Point) {
-        self.matrix[to.1][to.0] = std::mem::replace(
-            &mut self.matrix[from.1][from.0],
-            objects::parse(' ').expect("new Void object"),
-        );
+        self.matrix[to.1][to.0] =
+            std::mem::replace(&mut self.matrix[from.1][from.0], objects::get_placeholder());
     }
 
-    pub fn tick(&mut self, direction: Option<Dir>) {
+    pub fn tick(&mut self, direction: Option<Direction>) {
         // Player
         self.handle_requests(self.get_obj(self.player).tick(self, self.player, direction));
 
         // Rocks
         for y in (0..self.matrix.len()).rev() {
             for x in 0..self.matrix[y].len() {
-                if self.get_obj((x, y)).rock() {
+                if self.get_obj((x, y)).can_be_moved() {
                     self.handle_requests(self.get_obj((x, y)).tick(self, (x, y), None));
                 }
             }
@@ -115,14 +111,14 @@ impl Level {
 }
 
 #[derive(PartialEq, Eq)]
-pub enum Dir {
+pub enum Direction {
     Up,
     Down,
     Left,
     Right,
 }
 
-impl Dir {
+impl Direction {
     const fn apply_to(&self, point: &Point) -> Point {
         let (x, y) = match self {
             Self::Up => (0, -1),

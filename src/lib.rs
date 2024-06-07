@@ -5,12 +5,12 @@ use std::{
 };
 
 mod args;
-mod modes;
 mod level;
+mod modes;
 
 pub use args::Config;
+use level::{Direction, Level, State};
 use modes::{Input, Interaction, Mode};
-use level::{Dir, Level, State};
 
 fn read_level(path: &str) -> Result<Level, Box<dyn Error>> {
     let contents = fs::read_to_string(path)?;
@@ -18,6 +18,7 @@ fn read_level(path: &str) -> Result<Level, Box<dyn Error>> {
     Ok(level)
 }
 
+// TODO level drawer
 pub fn run(mut config: Config) -> Result<(), Box<dyn Error>> {
     let mut levels = Vec::new();
     for path in &config.level_paths {
@@ -69,16 +70,16 @@ pub fn run_level(
             }
             Input::Esc | Input::Space => config.pause = !config.pause,
 
-            Input::Up => direction = Some(Dir::Up),
-            Input::Down => direction = Some(Dir::Down),
-            Input::Left => direction = Some(Dir::Left),
-            Input::Right => direction = Some(Dir::Right),
+            Input::Up => direction = Some(Direction::Up),
+            Input::Down => direction = Some(Direction::Down),
+            Input::Left => direction = Some(Direction::Left),
+            Input::Right => direction = Some(Direction::Right),
         }
 
         if timer.elapsed() > config.delay {
             timer = Instant::now();
 
-            if direction.is_some() {
+            if launch_pause && direction.is_some() {
                 launch_pause = false;
             }
             if (config.pause && direction.is_none()) || launch_pause {

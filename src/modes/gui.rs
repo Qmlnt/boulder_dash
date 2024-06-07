@@ -1,17 +1,18 @@
 use super::{Input, Interaction};
 use crate::{
     args::Config,
-    level::{Obj, Update},
+    level::{Labels, Update},
 };
 use sdl2::{
     event::Event,
+    image::LoadTexture,
     keyboard::Keycode,
     rect::Rect,
     render::{Canvas, TextureCreator},
     video::{Window, WindowContext},
     EventPump,
 };
-use std::error::Error;
+use std::{error::Error, path::Path};
 
 pub struct Gui {
     canvas: Canvas<Window>,
@@ -87,7 +88,8 @@ impl Interaction for Gui {
             for (obj, x) in row.iter().zip(0i32..) {
                 let texture = self
                     .texture_creator
-                    .create_texture_from_surface(obj.sprite()?)?;
+                    .load_texture(Path::new(&format!("assets/sprites/{}.png", obj.name())))?;
+
                 let pos = Rect::new(x * 30, y * 30, 30, 30);
                 self.canvas.copy(&texture, None, pos)?;
             }

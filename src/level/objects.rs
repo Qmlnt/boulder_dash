@@ -1,5 +1,5 @@
+use super::{Direction, Level, Point, State};
 use enum_dispatch::enum_dispatch;
-use std::path::Path;
 
 mod dirt;
 mod gem;
@@ -15,10 +15,8 @@ use rock::Rock;
 use void::Void;
 use wall::Wall;
 
-use super::{Dir, Level, Point, State};
-use sdl2::{image::LoadSurface, surface::Surface};
-
 #[enum_dispatch]
+#[derive(Debug)]
 pub enum Object {
     Gem,
     Wall,
@@ -32,42 +30,49 @@ pub enum Request {
     AddScore,
     AddMaxScore,
     UpdateState(State),
-    MoveObj(Point, Point),
+    MoveObj(Point, Point), // (from, to)
 }
 
 #[enum_dispatch(Object)]
-pub trait Obj {
+pub trait Labels: std::fmt::Debug {
     fn char(&self) -> char;
     fn emoji(&self) -> char;
-    fn name(&self) -> &str;
+    fn name(&self) -> String {
+        format!("{self:?}").to_lowercase()
+    }
+}
 
-    fn void(&self) -> bool {
+#[enum_dispatch(Object)]
+pub trait Properties {
+    fn placeholder(&self) -> bool {
         false
     }
-    fn rock(&self) -> bool {
+    fn can_be_moved(&self) -> bool {
         false
     }
     fn player(&self) -> bool {
         false
     }
-    fn breakable(&self) -> bool {
+    fn can_be_broken(&self) -> bool {
         false
     }
+}
 
-    // TODO that's messed up
-    fn sprite(&self) -> Result<Surface, String> {
-        Surface::from_file(Path::new(&format!("assets/sprites/{}.png", self.name())))
-    }
-
+#[enum_dispatch(Object)]
+pub trait Behaviour {
     fn init(&self) -> Vec<Request> {
         vec![]
     }
     fn on_broken(&self, _: &Level) -> Vec<Request> {
         vec![]
     }
-    fn tick(&self, _: &Level, _: Point, _: Option<Dir>) -> Vec<Request> {
+    fn tick(&self, _: &Level, _: Point, _: Option<Direction>) -> Vec<Request> {
         vec![]
     }
+}
+
+pub fn get_placeholder() -> Object {
+    Void.into()
 }
 
 pub fn parse(chr: char) -> Result<Object, String> {

@@ -1,22 +1,24 @@
-use super::{Level, Obj, Request, State};
+use super::{Behaviour, Labels, Level, Properties, Request, State};
 
+#[derive(Debug)]
 pub struct Gem;
 
-impl Obj for Gem {
+impl Labels for Gem {
     fn char(&self) -> char {
         '+'
     }
     fn emoji(&self) -> char {
         '💎'
     }
-    fn name(&self) -> &str {
-        "gem"
-    }
+}
 
-    fn breakable(&self) -> bool {
+impl Properties for Gem {
+    fn can_be_broken(&self) -> bool {
         true
     }
+}
 
+impl Behaviour for Gem {
     fn init(&self) -> Vec<Request> {
         vec![Request::AddMaxScore]
     }

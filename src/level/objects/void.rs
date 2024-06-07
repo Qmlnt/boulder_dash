@@ -1,19 +1,21 @@
-use super::Obj;
+use super::{Behaviour, Labels, Properties};
 
+#[derive(Debug)]
 pub struct Void;
 
-impl Obj for Void {
+impl Labels for Void {
     fn char(&self) -> char {
         ' '
     }
     fn emoji(&self) -> char {
         '　'
     }
-    fn name(&self) -> &str {
-        "void"
-    }
+}
 
-    fn void(&self) -> bool {
+impl Properties for Void {
+    fn placeholder(&self) -> bool {
         true
     }
 }
+
+impl Behaviour for Void {}

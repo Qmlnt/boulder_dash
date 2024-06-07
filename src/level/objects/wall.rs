@@ -1,15 +1,16 @@
-use super::Obj;
+use super::{Behaviour, Labels, Properties};
 
+#[derive(Debug)]
 pub struct Wall;
 
-impl Obj for Wall {
+impl Labels for Wall {
     fn char(&self) -> char {
         '#'
     }
     fn emoji(&self) -> char {
         '🧱'
     }
-    fn name(&self) -> &str {
-        "wall"
-    }
 }
+
+impl Properties for Wall {}
+impl Behaviour for Wall {}
