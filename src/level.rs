@@ -1,44 +1,15 @@
-use crate::objects;
-use enum_dispatch::enum_dispatch;
-use objects::Object;
+mod direction;
+mod request;
+mod traits;
+
+use crate::objects::Object;
+pub use {
+    direction::Direction,
+    request::Request,
+    traits::{Behaviour, Properties},
+};
 
 pub type Point = (usize, usize); // (x, y)
-
-pub enum Request {
-    AddScore,
-    AddMaxScore,
-    UpdateState(State),
-    MoveObj(Point, Point), // (from, to)
-}
-
-#[enum_dispatch(Object)]
-pub trait Properties {
-    fn placeholder(&self) -> bool {
-        false
-    }
-    fn can_be_moved(&self) -> bool {
-        false
-    }
-    fn player(&self) -> bool {
-        false
-    }
-    fn can_be_broken(&self) -> bool {
-        false
-    }
-}
-
-#[enum_dispatch(Object)]
-pub trait Behaviour {
-    fn init(&self) -> Vec<Request> {
-        vec![]
-    }
-    fn on_broken(&self, _: &Level) -> Vec<Request> {
-        vec![]
-    }
-    fn tick(&self, _: &Level, _: Point, _: Option<Direction>) -> Vec<Request> {
-        vec![]
-    }
-}
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum State {
@@ -89,7 +60,7 @@ impl Level {
             let mut row = vec![];
 
             for (x, chr) in line.chars().enumerate() {
-                let obj = objects::parse(chr)?;
+                let obj = crate::objects::parse(chr)?;
                 level.handle_requests(obj.init());
                 if obj.player() {
                     level.player = (x, y);
@@ -127,8 +98,10 @@ impl Level {
     }
 
     fn move_obj(&mut self, from: Point, to: Point) {
-        self.matrix[to.1][to.0] =
-            std::mem::replace(&mut self.matrix[from.1][from.0], objects::get_placeholder());
+        self.matrix[to.1][to.0] = std::mem::replace(
+            &mut self.matrix[from.1][from.0],
+            crate::objects::get_placeholder(),
+        );
     }
 
     pub fn tick(&mut self, direction: Option<Direction>) {
@@ -146,29 +119,5 @@ impl Level {
                 }
             }
         }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl Direction {
-    pub const fn apply_to(&self, point: &Point) -> Point {
-        let (x, y) = match self {
-            Self::Up => (0, -1),
-            Self::Down => (0, 1),
-            Self::Left => (-1, 0),
-            Self::Right => (1, 0),
-        };
-
-        (
-            point.0.saturating_add_signed(x),
-            point.1.saturating_add_signed(y),
-        )
     }
 }

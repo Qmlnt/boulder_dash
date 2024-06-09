@@ -11,8 +11,10 @@ FLAGS:
     -p, --pause
         Launch paused.
 OPTIONS:
+    -s, --size <integer>
+        Object size for GUI. (default 30 pixels).
     -d, --delay <integer>
-        Delay between frames. (default: 1000ms)
+        Delay between frames. (default: 1000 ms)
     -h, --help
         Show this message.\
 ";
@@ -29,12 +31,14 @@ pub struct Config {
     pub pause: bool,
     pub app_mode: AppMode,
     pub delay: Duration,
+    pub size: u16,
     pub level_paths: Vec<String>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
+            size: 30,
             pause: false,
             level_paths: vec![],
             app_mode: AppMode::Tui,
@@ -43,21 +47,20 @@ impl Default for Config {
     }
 }
 
+fn parse_num(var_str: Option<String>, var_name: &str) -> Result<isize, String> {
+    match var_str {
+        Some(num_str) => match num_str.parse() {
+            Ok(num) => Ok(num),
+            Err(_) => Err(format!("Invalid `{var_name}` value!")),
+        },
+        None => Err(format!("Missing `{var_name}` value!")),
+    }
+}
+
 // TODO: read from file
 impl Config {
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut cfg = Self::default();
-
-        let parse_num = |var_str: Option<String>, var_name| {
-            var_str.map_or_else(
-                || Err(format!("Missing `{var_name}` value!")),
-                |num_str| {
-                    num_str
-                        .parse()
-                        .map_or_else(|_| Err(format!("Invalid `{var_name}` value!")), Ok)
-                },
-            )
-        };
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -70,7 +73,10 @@ impl Config {
                 "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
                 "-c" | "--cli" => cfg.app_mode = AppMode::Cli,
                 "-d" | "--delay" => {
-                    cfg.delay = Duration::from_millis(parse_num(args.next(), "delay")?);
+                    cfg.delay = Duration::from_millis(parse_num(args.next(), "delay")? as u64);
+                }
+                "-s" | "--size" => {
+                    cfg.size = parse_num(args.next(), "size")? as u16;
                 }
 
                 _ => cfg.level_paths.push(arg),

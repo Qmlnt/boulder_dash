@@ -52,7 +52,7 @@ pub trait Labels: std::fmt::Debug {
     }
 }
 
-pub fn get_mode(app_mode: &AppMode) -> Result<Mode, String> {
+pub fn get_mode(app_mode: &AppMode) -> Result<Mode, Box<dyn Error>> {
     Ok(match app_mode {
         AppMode::Gui => Gui::new()?.into(),
         AppMode::Tui => Tui::new().into(),

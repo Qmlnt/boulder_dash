@@ -9,39 +9,45 @@ use sdl2::{
     video::{Window, WindowContext},
     EventPump,
 };
-use std::{error::Error, path::Path};
+use std::{collections::BTreeMap, error::Error, fs};
 
 pub struct Gui {
     canvas: Canvas<Window>,
     event_pump: EventPump,
     texture_creator: TextureCreator<WindowContext>,
+    texture_cache: BTreeMap<String, Box<[u8]>>,
 }
 
 impl Gui {
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let sdl_context = sdl2::init()?;
         // let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
-
-        let window = sdl_context
+        let canvas = sdl_context
             .video()?
             .window("Boulder Dash", 800, 600)
+            .fullscreen_desktop()
             .position_centered()
-            .build()
-            .map_err(|e| e.to_string())?;
-
-        let canvas = window
+            .build()?
             .into_canvas()
             .software()
-            .build()
-            .map_err(|e| e.to_string())?;
-        let texture_creator = canvas.texture_creator();
+            .build()?;
 
         let event_pump = sdl_context.event_pump()?;
+
+        let mut texture_cache = BTreeMap::new();
+        for path in fs::read_dir("assets/sprites/")?.filter_map(Result::ok) {
+            //let file_name = Path::new(&path.file_name()).with_extension("");
+            let contents = fs::read(path.path())?.into_boxed_slice();
+            texture_cache.insert(path.file_name().into_string().expect("str path"), contents);
+        }
+
+        let texture_creator = canvas.texture_creator();
 
         Ok(Self {
             canvas,
             event_pump,
             texture_creator,
+            texture_cache,
         })
     }
 }
@@ -77,17 +83,20 @@ impl Interaction for Gui {
         input
     }
 
-    fn draw(&mut self, level: &mut Level, _config: &Config) -> Result<(), Box<dyn Error>> {
-        //self.canvas.set_draw_color(Color::RGB(0, 122, 255));
+    fn draw(&mut self, level: &mut Level, config: &Config) -> Result<(), Box<dyn Error>> {
+        // self.canvas.set_draw_color(Color::RGB(0, 122, 255));
         self.canvas.clear();
 
         for (row, y) in level.get_objects().iter().zip(0i32..) {
             for (obj, x) in row.iter().zip(0i32..) {
-                let texture = self
-                    .texture_creator
-                    .load_texture(Path::new(&format!("assets/sprites/{}.png", obj.name())))?;
-
-                let pos = Rect::new(x * 30, y * 30, 30, 30);
+                let pos = Rect::new(
+                    x * i32::from(config.size),
+                    y * i32::from(config.size),
+                    u32::from(config.size),
+                    u32::from(config.size),
+                );
+                let bytes = &self.texture_cache[&obj.name()];
+                let texture = self.texture_creator.load_texture_bytes(bytes)?;
                 self.canvas.copy(&texture, None, pos)?;
             }
         }
