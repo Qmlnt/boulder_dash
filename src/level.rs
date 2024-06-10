@@ -1,15 +1,16 @@
-mod direction;
-mod request;
 mod traits;
 
-use crate::objects::Object;
-pub use {
-    direction::Direction,
-    request::Request,
-    traits::{Behaviour, Properties},
-};
+use crate::{objects::Object, Direction};
+pub use traits::{Behaviour, Properties};
 
 pub type Point = (usize, usize); // (x, y)
+
+pub enum Request {
+    AddScore,
+    AddMaxScore,
+    UpdateState(State),
+    MoveObj(Point, Point), // (from, to)
+}
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum State {
@@ -35,14 +36,14 @@ impl Level {
     pub const fn get_max_score(&self) -> &usize {
         &self.max_score
     }
+    pub const fn get_state(&self) -> &Option<State> {
+        &self.state
+    }
     pub const fn get_player_pos(&self) -> &Point {
         &self.player
     }
     pub fn get_damaged(&mut self) -> Vec<Point> {
         std::mem::take(&mut self.damaged)
-    }
-    pub const fn get_state(&self) -> &Option<State> {
-        &self.state
     }
     pub fn get_object(&self, (x, y): Point) -> &Object {
         &self.matrix[y][x]

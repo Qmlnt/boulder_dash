@@ -58,17 +58,17 @@ impl Interaction for Gui {
 
         while let Some(event) = self.event_pump.poll_event() {
             input = match event {
-                Event::Quit { .. } => return Input::Quit,
+                Event::Quit { .. } => return Input::Q,
 
                 Event::KeyDown {
                     keycode: Some(key), ..
                 } => match key {
                     Keycode::Escape => Input::Esc,
                     Keycode::Space => Input::Space,
-                    Keycode::P => Input::Reload,
-                    Keycode::Comma => Input::DelayDown,
-                    Keycode::Period => Input::DelayUp,
-                    Keycode::Q => Input::Quit,
+                    Keycode::P => Input::R,
+                    Keycode::Comma => Input::Comma,
+                    Keycode::Period => Input::Dot,
+                    Keycode::Q => Input::Q,
                     Keycode::W | Keycode::Up => Input::Up,
                     Keycode::R | Keycode::Down => Input::Down,
                     Keycode::A | Keycode::Left => Input::Left,

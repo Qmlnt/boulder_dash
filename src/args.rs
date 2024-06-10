@@ -1,22 +1,25 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 const HELP_MSG: &str = "\
 FLAGS:
-    -g, --gui
-        Launch GUI mode.
-    -t, --tui
-        Launch TUI mode. (default)
-    -c, --cli
-        TUI mode with damaged tracking.
+    -h, --help
+        Show this message.
     -p, --pause
         Launch paused.
 OPTIONS:
+    -m, --mode <string>
+        * gui
+        * tui (default)
+        * cli
+        Select display mode.
+    -p, --program <string>
+        * g / b / game (default)
+        * e / editor
+        Select program to run.
     -s, --size <integer>
         Object size for GUI. (default 30 pixels).
     -d, --delay <integer>
-        Delay between frames. (default: 1000 ms)
-    -h, --help
-        Show this message.\
+        Delay between frames. (default: 1000 ms)\
 ";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -26,41 +29,73 @@ pub enum AppMode {
     Cli,
 }
 
+impl FromStr for AppMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "gui" => Ok(Self::Gui),
+            "tui" => Ok(Self::Tui),
+            "cli" => Ok(Self::Cli),
+            _ => Err(format!("Can't parse {s} as a valid display mode!")),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ProgramMode {
+    Game,
+    Editor,
+}
+
+impl FromStr for ProgramMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "g" | "b" | "game" => Ok(Self::Game),
+            "e" | "editor" => Ok(Self::Editor),
+            _ => Err(format!("Can't parse {s} as a valid program mode!")),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Config {
     pub pause: bool,
-    pub app_mode: AppMode,
-    pub delay: Duration,
     pub size: u16,
+    pub delay: Duration,
+    pub app_mode: AppMode,
+    pub program_mode: ProgramMode,
     pub level_paths: Vec<String>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            size: 30,
             pause: false,
-            level_paths: vec![],
-            app_mode: AppMode::Tui,
+            size: 30,
             delay: Duration::from_millis(1000),
+            program_mode: ProgramMode::Game,
+            app_mode: AppMode::Tui,
+            level_paths: vec![],
         }
     }
 }
 
-fn parse_num(var_str: Option<String>, var_name: &str) -> Result<isize, String> {
-    match var_str {
-        Some(num_str) => match num_str.parse() {
-            Ok(num) => Ok(num),
-            Err(_) => Err(format!("Invalid `{var_name}` value!")),
-        },
-        None => Err(format!("Missing `{var_name}` value!")),
+fn parse_arg<T, E>(arg_opt: Option<String>, arg_name: &str) -> Result<T, String>
+where
+    T: FromStr<Err = E>,
+    E: ToString,
+{
+    match arg_opt {
+        Some(arg) => arg.parse().map_err(|e: E| e.to_string()),
+        None => Err(format!("Missing `{arg_name}` value!")),
     }
 }
 
 // TODO: read from file
 impl Config {
     pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
-        let mut cfg = Self::default();
+        let mut config = Self::default();
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -68,23 +103,21 @@ impl Config {
                     println!("{HELP_MSG}");
                     std::process::exit(0);
                 }
-                "-p" | "--pause" => cfg.pause = true,
-                "-g" | "--gui" => cfg.app_mode = AppMode::Gui,
-                "-t" | "--tui" => cfg.app_mode = AppMode::Tui,
-                "-c" | "--cli" => cfg.app_mode = AppMode::Cli,
-                "-d" | "--delay" => {
-                    cfg.delay = Duration::from_millis(parse_num(args.next(), "delay")? as u64);
-                }
-                "-s" | "--size" => {
-                    cfg.size = parse_num(args.next(), "size")? as u16;
-                }
+                "-p" | "--pause" => config.pause = true,
 
-                _ => cfg.level_paths.push(arg),
+                "-m" | "--mode" => config.app_mode = parse_arg(args.next(), arg.as_str())?,
+                "-p" | "--program" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
+                "-d" | "--delay" => {
+                    config.delay = Duration::from_millis(parse_arg(args.next(), arg.as_str())?)
+                }
+                "-s" | "--size" => config.size = parse_arg(args.next(), arg.as_str())?,
+
+                _ => config.level_paths.push(arg),
             }
         }
 
-        match cfg.level_paths.first() {
-            Some(_) => Ok(cfg),
+        match config.level_paths.first() {
+            Some(_) => Ok(config),
             None => Err("Provide at least one level path!".into()),
         }
     }

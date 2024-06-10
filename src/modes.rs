@@ -24,17 +24,17 @@ pub enum Mode {
 #[derive(PartialEq, Eq)]
 pub enum Input {
     Esc,
-    Quit,
-    Reload,
     Unknown,
+    Q,
+    R,
 
     Up,
     Down,
     Left,
     Right,
     Space,
-    DelayDown,
-    DelayUp,
+    Comma,
+    Dot,
 }
 
 #[enum_dispatch(Mode)]

@@ -8,9 +8,12 @@ mod args;
 mod level;
 mod modes;
 mod objects;
+mod direction;
+mod editor;
 
+use direction::Direction;
 pub use args::Config;
-use level::{Direction, Level, State};
+use level::{Level, State};
 use modes::{Input, Interaction, Mode};
 
 fn read_level(path: &str) -> Result<Level, Box<dyn Error>> {
@@ -54,17 +57,17 @@ pub fn run_level(
         let mut input = true;
         match display_mode.get_input() {
             Input::Unknown => input = false,
-            Input::Quit => process::exit(0),
-            Input::Reload => {
+            Input::Q => process::exit(0),
+            Input::R => {
                 launch_pause = true;
                 level = read_level(level_path)?;
             }
-            Input::DelayDown => {
+            Input::Comma => {
                 if config.delay.as_millis() >= 100 {
                     config.delay -= Duration::from_millis(50);
                 }
             }
-            Input::DelayUp => {
+            Input::Dot => {
                 if config.delay.as_millis() <= 950 {
                     config.delay += Duration::from_millis(50);
                 }

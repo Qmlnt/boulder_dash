@@ -1,6 +1,7 @@
 use crate::{
-    level::{Behaviour, Direction, Level, Point, Properties, Request, State},
+    level::{Behaviour, Level, Point, Properties, Request, State},
     modes::Labels,
+    Direction,
 };
 use enum_dispatch::enum_dispatch;
 

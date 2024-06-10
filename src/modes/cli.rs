@@ -48,10 +48,7 @@ impl Interaction for Cli {
             ),
         };
 
-        self.tui.get_term().move_cursor_down(99)?;
-        self.tui
-            .get_term()
-            .move_cursor_up(status_msg.lines().count())?;
+        self.tui.get_term().move_cursor_to(0, level.get_objects().len())?;
         self.tui.get_term().write_line(&status_msg)?;
 
         Ok(())
