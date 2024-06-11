@@ -1,28 +1,30 @@
-use super::{Level, Obj, Request, State};
+use super::{Behaviour, Labels, Level, Properties, Request, State};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Gem;
 
-impl Obj for Gem {
+impl Labels for Gem {
     fn char(&self) -> char {
         '+'
     }
     fn emoji(&self) -> char {
         '💎'
     }
-    fn name(&self) -> &str {
-        "gem"
-    }
+}
 
-    fn breakable(&self) -> bool {
+impl Properties for Gem {
+    fn can_be_broken(&self) -> bool {
         true
     }
+}
 
+impl Behaviour for Gem {
     fn init(&self) -> Vec<Request> {
         vec![Request::AddMaxScore]
     }
     fn on_broken(&self, level: &Level) -> Vec<Request> {
         let mut requests = vec![Request::AddScore];
-        if level.score + 1 == level.max_score {
+        if level.get_score() + 1 == *level.get_max_score() {
             requests.push(Request::UpdateState(State::Win));
         }
 
