@@ -1,4 +1,4 @@
-use crate::Input;
+use crate::interaction::Input;
 
 #[derive(PartialEq, Eq)]
 pub enum Direction {
@@ -9,13 +9,14 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn from_input(input: &Input) -> Option<Self> {
+    pub const fn from_input(input: &Input) -> Option<Self> {
         match input {
-            Input::Up => Some(Direction::Up),
-            Input::Down => Some(Direction::Down),
-            Input::Left => Some(Direction::Left),
-            Input::Right => Some(Direction::Right),
-            _ => None
+            Input::Up | Input::W => Some(Self::Up),
+            Input::Down | Input::S => Some(Self::Down),
+            Input::Left | Input::A => Some(Self::Left),
+            Input::Right | Input::D => Some(Self::Right),
+
+            _ => None,
         }
     }
     pub const fn apply_to(&self, point: &(usize, usize)) -> (usize, usize) {

@@ -4,7 +4,7 @@ use std::process;
 use boulder_dash::Config;
 
 fn main() {
-    let config = Config::parse(env::args().skip(1)).unwrap_or_else(|err| {
+    let config = Config::new(env::args().skip(1)).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });

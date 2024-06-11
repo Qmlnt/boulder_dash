@@ -1,21 +1,21 @@
 use super::{Behaviour, Labels, Properties};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Dirt;
+pub struct Unknown;
 
-impl Labels for Dirt {
+impl Labels for Unknown {
     fn char(&self) -> char {
-        '*'
+        '?'
     }
     fn emoji(&self) -> char {
-        '🟨'
+        '🯄'
     }
 }
 
-impl Properties for Dirt {
-    fn can_be_broken(&self) -> bool {
+impl Properties for Unknown {
+    fn placeholder(&self) -> bool {
         true
     }
 }
 
-impl Behaviour for Dirt {}
+impl Behaviour for Unknown {}

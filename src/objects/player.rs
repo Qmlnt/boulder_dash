@@ -1,6 +1,6 @@
 use super::{Behaviour, Direction, Labels, Level, Point, Properties, Request, State};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Player;
 
 impl Labels for Player {
@@ -24,11 +24,11 @@ impl Behaviour for Player {
 
         // to prevent the rock from falling on player when object underneath is broken
         let mut player_broke = false;
-        let mut above_point = Direction::Up.apply_to(level.get_player_pos());
+        let mut above_point = Direction::Up.apply_to(level.get_player());
 
         // Player
         if let Some(dir) = direction {
-            let next_point = dir.apply_to(level.get_player_pos());
+            let next_point = dir.apply_to(level.get_player());
 
             player_broke = level.get_object(next_point).can_be_broken();
             let can_move_next = matches!(dir, Direction::Left | Direction::Right)
@@ -42,7 +42,7 @@ impl Behaviour for Player {
             }
 
             if level.get_object(next_point).placeholder() || player_broke || can_move_next {
-                requests.push(Request::MoveObj(*level.get_player_pos(), next_point));
+                requests.push(Request::MoveObj(*level.get_player(), next_point));
                 above_point = Direction::Up.apply_to(&next_point);
             }
         }
@@ -50,7 +50,7 @@ impl Behaviour for Player {
         // Check the rock above
         if !player_broke && level.get_object(above_point).can_be_moved() {
             requests.push(Request::UpdateState(State::Lose));
-            requests.push(Request::MoveObj(above_point, *level.get_player_pos()));
+            requests.push(Request::MoveObj(above_point, *level.get_player()));
         }
 
         requests

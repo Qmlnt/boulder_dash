@@ -1,15 +1,15 @@
-use super::{Input, Interaction, Labels};
-use crate::{args::Config, level::Level};
+use super::{Drawable, Input, Interaction};
+use crate::{args::Config, objects::Labels};
 use sdl2::{
     event::Event,
     image::LoadTexture,
-    keyboard::Keycode,
+    keyboard::{Keycode, Mod},
     rect::Rect,
     render::{Canvas, TextureCreator},
     video::{Window, WindowContext},
     EventPump,
 };
-use std::{collections::BTreeMap, error::Error, fs};
+use std::{collections::BTreeMap, fs};
 
 pub struct Gui {
     canvas: Canvas<Window>,
@@ -19,7 +19,7 @@ pub struct Gui {
 }
 
 impl Gui {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, String> {
         let sdl_context = sdl2::init()?;
         // let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
         let canvas = sdl_context
@@ -27,17 +27,24 @@ impl Gui {
             .window("Boulder Dash", 800, 600)
             .fullscreen_desktop()
             .position_centered()
-            .build()?
+            .build()
+            .map_err(|e| e.to_string())?
             .into_canvas()
             .software()
-            .build()?;
+            .build()
+            .map_err(|e| e.to_string())?;
 
         let event_pump = sdl_context.event_pump()?;
 
         let mut texture_cache = BTreeMap::new();
-        for path in fs::read_dir("assets/sprites/")?.filter_map(Result::ok) {
+        for path in fs::read_dir("assets/sprites/")
+            .map_err(|e| e.to_string())?
+            .filter_map(Result::ok)
+        {
             //let file_name = Path::new(&path.file_name()).with_extension("");
-            let contents = fs::read(path.path())?.into_boxed_slice();
+            let contents = fs::read(path.path())
+                .map_err(|e| e.to_string())?
+                .into_boxed_slice();
             texture_cache.insert(path.file_name().into_string().expect("str path"), contents);
         }
 
@@ -65,14 +72,19 @@ impl Interaction for Gui {
                 } => match key {
                     Keycode::Escape => Input::Esc,
                     Keycode::Space => Input::Space,
-                    Keycode::P => Input::R,
                     Keycode::Comma => Input::Comma,
-                    Keycode::Period => Input::Dot,
+                    Keycode::Period => Input::Period,
                     Keycode::Q => Input::Q,
-                    Keycode::W | Keycode::Up => Input::Up,
-                    Keycode::R | Keycode::Down => Input::Down,
-                    Keycode::A | Keycode::Left => Input::Left,
-                    Keycode::S | Keycode::Right => Input::Right,
+                    Keycode::P => Input::R,
+
+                    Keycode::W => Input::W,
+                    Keycode::A => Input::A,
+                    Keycode::R => Input::S,
+                    Keycode::S => Input::D,
+                    Keycode::Up => Input::Up,
+                    Keycode::Down => Input::Down,
+                    Keycode::Left => Input::Left,
+                    Keycode::Right => Input::Right,
                     _ => input,
                 },
 
@@ -83,11 +95,11 @@ impl Interaction for Gui {
         input
     }
 
-    fn draw(&mut self, level: &mut Level, config: &Config) -> Result<(), Box<dyn Error>> {
+    fn draw(&mut self, drawable: &mut impl Drawable, config: &Config) -> Result<(), String> {
         // self.canvas.set_draw_color(Color::RGB(0, 122, 255));
         self.canvas.clear();
 
-        for (row, y) in level.get_objects().iter().zip(0i32..) {
+        for (row, y) in drawable.get_objects().iter().zip(0i32..) {
             for (obj, x) in row.iter().zip(0i32..) {
                 let pos = Rect::new(
                     x * i32::from(config.size),

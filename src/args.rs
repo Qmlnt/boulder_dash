@@ -12,7 +12,7 @@ OPTIONS:
         * tui (default)
         * cli
         Select display mode.
-    -p, --program <string>
+    -r, --run <string>
         * g / b / game (default)
         * e / editor
         Select program to run.
@@ -36,7 +36,7 @@ impl FromStr for AppMode {
             "gui" => Ok(Self::Gui),
             "tui" => Ok(Self::Tui),
             "cli" => Ok(Self::Cli),
-            _ => Err(format!("Can't parse {s} as a valid display mode!")),
+            _ => Err(format!("Can't parse `{s}` as a valid display mode!")),
         }
     }
 }
@@ -53,7 +53,7 @@ impl FromStr for ProgramMode {
         match s.to_lowercase().as_str() {
             "g" | "b" | "game" => Ok(Self::Game),
             "e" | "editor" => Ok(Self::Editor),
-            _ => Err(format!("Can't parse {s} as a valid program mode!")),
+            _ => Err(format!("Can't parse `{s}` as a valid program mode!")),
         }
     }
 }
@@ -88,13 +88,13 @@ where
 {
     match arg_opt {
         Some(arg) => arg.parse().map_err(|e: E| e.to_string()),
-        None => Err(format!("Missing `{arg_name}` value!")),
+        None => Err(format!("Missing value for `{arg_name}`!")),
     }
 }
 
 // TODO: read from file
 impl Config {
-    pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
+    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut config = Self::default();
 
         while let Some(arg) = args.next() {
@@ -106,9 +106,9 @@ impl Config {
                 "-p" | "--pause" => config.pause = true,
 
                 "-m" | "--mode" => config.app_mode = parse_arg(args.next(), arg.as_str())?,
-                "-p" | "--program" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
+                "-r" | "--run" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
                 "-d" | "--delay" => {
-                    config.delay = Duration::from_millis(parse_arg(args.next(), arg.as_str())?)
+                    config.delay = Duration::from_millis(parse_arg(args.next(), arg.as_str())?);
                 }
                 "-s" | "--size" => config.size = parse_arg(args.next(), arg.as_str())?,
 

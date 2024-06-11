@@ -1,6 +1,6 @@
 use super::{Behaviour, Labels, Properties};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Void;
 
 impl Labels for Void {

@@ -1,6 +1,6 @@
 use super::{Behaviour, Direction, Labels, Level, Point, Properties, Request};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rock;
 
 impl Labels for Rock {
@@ -20,8 +20,8 @@ impl Properties for Rock {
 
 impl Behaviour for Rock {
     fn tick(&self, level: &Level, (x, y): Point, _: Option<Direction>) -> Vec<Request> {
-        if (x, y) == *level.get_player_pos()
-            || (x, y) == Direction::Up.apply_to(level.get_player_pos())
+        if (x, y) == *level.get_player()
+            || (x, y) == Direction::Up.apply_to(level.get_player())
         {
             return vec![];
         }

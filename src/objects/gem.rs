@@ -1,6 +1,6 @@
 use super::{Behaviour, Labels, Level, Properties, Request, State};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Gem;
 
 impl Labels for Gem {
