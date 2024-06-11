@@ -118,9 +118,9 @@ impl Interaction for Gui {
         }
 
         let (x, y) = *drawable.get_cursor();
-        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
+        self.canvas.set_draw_color(Color::RGB(0, 255, 0));
 
-        for i in 0..config.size % 6 {
+        for i in 0..config.size / 6 {
             self.canvas.draw_rect(Rect::new(
                 x as i32 * i32::from(config.size) + i as i32,
                 y as i32 * i32::from(config.size) + i as i32,
