@@ -3,15 +3,18 @@ use crate::{args::Config, objects::Labels};
 use sdl2::{
     event::Event,
     image::LoadTexture,
-    keyboard::{Keycode, Mod},
+    keyboard::Keycode,
+    pixels::Color,
     rect::Rect,
-    render::{Canvas, TextureCreator},
+    render::{Canvas, TextureCreator, TextureQuery},
+    ttf::Sdl2TtfContext,
     video::{Window, WindowContext},
     EventPump,
 };
 use std::{collections::BTreeMap, fs};
 
 pub struct Gui {
+    ttf_context: Sdl2TtfContext,
     canvas: Canvas<Window>,
     event_pump: EventPump,
     texture_creator: TextureCreator<WindowContext>,
@@ -21,11 +24,12 @@ pub struct Gui {
 impl Gui {
     pub fn new() -> Result<Self, String> {
         let sdl_context = sdl2::init()?;
-        // let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
+        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+
         let canvas = sdl_context
             .video()?
-            .window("Boulder Dash", 800, 600)
-            .fullscreen_desktop()
+            .window("Boulder Dash", 0, 0)
+            //.fullscreen_desktop()
             .position_centered()
             .build()
             .map_err(|e| e.to_string())?
@@ -41,7 +45,6 @@ impl Gui {
             .map_err(|e| e.to_string())?
             .filter_map(Result::ok)
         {
-            //let file_name = Path::new(&path.file_name()).with_extension("");
             let contents = fs::read(path.path())
                 .map_err(|e| e.to_string())?
                 .into_boxed_slice();
@@ -51,6 +54,7 @@ impl Gui {
         let texture_creator = canvas.texture_creator();
 
         Ok(Self {
+            ttf_context,
             canvas,
             event_pump,
             texture_creator,
@@ -113,6 +117,38 @@ impl Interaction for Gui {
             }
         }
 
+        let (x, y) = *drawable.get_cursor();
+        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
+
+        for i in 0..config.size % 6 {
+            self.canvas.draw_rect(Rect::new(
+                x as i32 * i32::from(config.size) + i as i32,
+                y as i32 * i32::from(config.size) + i as i32,
+                u32::from(config.size).saturating_sub(2 * i as u32),
+                u32::from(config.size).saturating_sub(2 * i as u32),
+            ))?;
+        }
+
+        let mut bottom = drawable.get_objects().len() as i32;
+        for line in drawable.get_status(config).lines() {
+            let font_surface = self
+                .ttf_context
+                .load_font("assets/OpenSans.ttf", config.size)?
+                .render(line)
+                .blended(Color::RGB(200, 255, 0))
+                .map_err(|e| e.to_string())?;
+            let font_texture = self
+                .texture_creator
+                .create_texture_from_surface(&font_surface)
+                .map_err(|e| e.to_string())?;
+
+            let TextureQuery { width, height, .. } = font_texture.query();
+            let pos = Rect::new(0, bottom * config.size as i32, width, height);
+            self.canvas.copy(&font_texture, None, Some(pos))?;
+            bottom += 1;
+        }
+
+        self.canvas.set_draw_color(Color::BLACK);
         self.canvas.present();
 
         Ok(())
