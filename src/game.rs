@@ -61,9 +61,6 @@ impl Level {
 }
 
 impl Drawable for Level {
-    fn get_cursor(&self) -> &Point {
-        self.get_player()
-    }
     fn get_damaged(&mut self) -> HashSet<Point> {
         self.get_damaged()
     }
@@ -167,7 +164,7 @@ impl Level {
         let mut direction = None;
         let mut timer = Instant::now();
 
-        interaction.draw(self, config)?;
+        interaction.draw(self, config).map_err(|e| e.to_string())?;
 
         loop {
             let mut input = true;
@@ -207,13 +204,13 @@ impl Level {
                 }
 
                 self.tick_objects(direction.take());
-                interaction.draw(self, config)?;
+                interaction.draw(self, config).map_err(|e| e.to_string())?;
 
                 if let Some(state) = self.get_state() {
                     return Ok(state.clone());
                 }
             } else if input {
-                interaction.draw(self, config)?;
+                interaction.draw(self, config).map_err(|e| e.to_string())?;
             }
 
             thread::sleep(Duration::from_millis(10));

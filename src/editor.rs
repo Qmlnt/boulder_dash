@@ -34,8 +34,8 @@ impl Editor {
 }
 
 impl Drawable for Editor {
-    fn get_cursor(&self) -> &Point {
-        self.get_cursor()
+    fn get_cursor(&self) -> Option<&Point> {
+        Some(self.get_cursor())
     }
     fn get_damaged(&mut self) -> HashSet<Point> {
         self.get_damaged()
@@ -95,7 +95,7 @@ impl Editor {
     }
 
     pub fn run(&mut self, config: &mut Config, interaction: &mut Mode) -> Result<(), String> {
-        interaction.draw(self, config)?;
+        interaction.draw(self, config).map_err(|e| e.to_string())?;
 
         let objects = Object::all_objects();
 
@@ -157,7 +157,7 @@ impl Editor {
                 self.damaged.insert(self.cursor);
             }
 
-            interaction.draw(self, config)?;
+            interaction.draw(self, config).map_err(|e| e.to_string())?;
         }
     }
 }
