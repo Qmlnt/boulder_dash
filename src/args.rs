@@ -7,6 +7,10 @@ FLAGS:
     -p, --pause
         Launch paused.
 OPTIONS:
+    -l, --level <string>
+        Required.
+        Specify a level to run.
+        Can be used multiple times.
     -m, --mode <string>
         * gui
         * tui (default)
@@ -105,14 +109,16 @@ impl Config {
                 }
                 "-p" | "--pause" => config.pause = true,
 
-                "-m" | "--mode" => config.app_mode = parse_arg(args.next(), arg.as_str())?,
-                "-r" | "--run" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
+                "-s" | "--size" => config.size = parse_arg(args.next(), arg.as_str())?,
                 "-d" | "--delay" => {
                     config.delay = Duration::from_millis(parse_arg(args.next(), arg.as_str())?);
                 }
-                "-s" | "--size" => config.size = parse_arg(args.next(), arg.as_str())?,
+                "-l" | "--level" => config.level_paths.push(parse_arg(args.next(), arg.as_str())?),
 
-                _ => config.level_paths.push(arg),
+                "-m" | "--mode" => config.app_mode = parse_arg(args.next(), arg.as_str())?,
+                "-r" | "--run" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
+
+                _ => return Err(format!("Unrecognized option `{arg}`!")),
             }
         }
 

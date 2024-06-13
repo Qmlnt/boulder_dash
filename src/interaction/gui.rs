@@ -11,7 +11,7 @@ use sdl2::{
     video::{Window, WindowContext},
     EventPump,
 };
-use std::{collections::BTreeMap, fs};
+use std::{collections::BTreeMap, error::Error, fs};
 
 pub struct Gui {
     ttf_context: Sdl2TtfContext,
@@ -22,32 +22,25 @@ pub struct Gui {
 }
 
 impl Gui {
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let sdl_context = sdl2::init()?;
-        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+        let ttf_context = sdl2::ttf::init()?;
 
         let canvas = sdl_context
             .video()?
             .window("Boulder Dash", 0, 0)
-            //.fullscreen_desktop()
+            .fullscreen_desktop()
             .position_centered()
-            .build()
-            .map_err(|e| e.to_string())?
+            .build()?
             .into_canvas()
             .software()
-            .build()
-            .map_err(|e| e.to_string())?;
+            .build()?;
 
         let event_pump = sdl_context.event_pump()?;
 
         let mut texture_cache = BTreeMap::new();
-        for path in fs::read_dir("assets/sprites/")
-            .map_err(|e| e.to_string())?
-            .filter_map(Result::ok)
-        {
-            let contents = fs::read(path.path())
-                .map_err(|e| e.to_string())?
-                .into_boxed_slice();
+        for path in fs::read_dir("assets/sprites/")?.filter_map(Result::ok) {
+            let contents = fs::read(path.path())?.into_boxed_slice();
             texture_cache.insert(path.file_name().into_string().expect("str path"), contents);
         }
 
@@ -99,7 +92,11 @@ impl Interaction for Gui {
         input
     }
 
-    fn draw(&mut self, drawable: &mut impl Drawable, config: &Config) -> Result<(), String> {
+    fn draw(
+        &mut self,
+        drawable: &mut impl Drawable,
+        config: &Config,
+    ) -> Result<(), Box<dyn Error>> {
         // self.canvas.set_draw_color(Color::RGB(0, 122, 255));
         self.canvas.clear();
 
@@ -117,33 +114,32 @@ impl Interaction for Gui {
             }
         }
 
-        let (x, y) = *drawable.get_cursor();
-        self.canvas.set_draw_color(Color::RGB(0, 255, 0));
+        if let Some(&(x, y)) = drawable.get_cursor() {
+            self.canvas.set_draw_color(Color::RGB(0, 255, 0));
 
-        for i in 0..config.size / 6 {
-            self.canvas.draw_rect(Rect::new(
-                x as i32 * i32::from(config.size) + i as i32,
-                y as i32 * i32::from(config.size) + i as i32,
-                u32::from(config.size).saturating_sub(2 * i as u32),
-                u32::from(config.size).saturating_sub(2 * i as u32),
-            ))?;
+            for i in 0..config.size / 6 {
+                self.canvas.draw_rect(Rect::new(
+                    i32::try_from(x)? * i32::from(config.size) + i32::from(i),
+                    i32::try_from(y)? * i32::from(config.size) + i32::from(i),
+                    u32::from(config.size).saturating_sub(2 * u32::from(i)),
+                    u32::from(config.size).saturating_sub(2 * u32::from(i)),
+                ))?;
+            }
         }
 
-        let mut bottom = drawable.get_objects().len() as i32;
+        let mut bottom = i32::try_from(drawable.get_objects().len())?;
         for line in drawable.get_status(config).lines() {
             let font_surface = self
                 .ttf_context
                 .load_font("assets/OpenSans.ttf", config.size)?
                 .render(line)
-                .blended(Color::RGB(200, 255, 0))
-                .map_err(|e| e.to_string())?;
+                .blended(Color::RGB(200, 255, 0))?;
             let font_texture = self
                 .texture_creator
-                .create_texture_from_surface(&font_surface)
-                .map_err(|e| e.to_string())?;
+                .create_texture_from_surface(&font_surface)?;
 
             let TextureQuery { width, height, .. } = font_texture.query();
-            let pos = Rect::new(0, bottom * config.size as i32, width, height);
+            let pos = Rect::new(0, bottom * i32::from(config.size), width, height);
             self.canvas.copy(&font_texture, None, Some(pos))?;
             bottom += 1;
         }

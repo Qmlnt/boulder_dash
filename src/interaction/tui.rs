@@ -1,7 +1,7 @@
 use super::{Drawable, Input, Interaction};
 use crate::{args::Config, objects::Labels};
 use console::{Key, Term};
-use std::{sync::mpsc, thread};
+use std::{error::Error, sync::mpsc, thread};
 
 pub struct Tui {
     term: Term,
@@ -57,23 +57,31 @@ impl Interaction for Tui {
         })
     }
 
-    fn draw(&mut self, drawable: &mut impl Drawable, config: &Config) -> Result<(), String> {
-        self.term.clear_screen().map_err(|e| e.to_string())?;
+    fn draw(
+        &mut self,
+        drawable: &mut impl Drawable,
+        config: &Config,
+    ) -> Result<(), Box<dyn Error>> {
+        self.term.clear_screen()?;
 
         for row in drawable.get_objects() {
             let mut line = String::new();
             for obj in row {
                 line.push(obj.emoji());
             }
-            self.term.write_line(&line).map_err(|e| e.to_string())?;
+            self.term.write_line(&line)?;
         }
 
-        self.term.write_line("").map_err(|e| e.to_string())?;
-        self.term
-            .write_line(&drawable.get_status(config))
-            .map_err(|e| e.to_string())?;
+        self.term.write_line("")?;
+        self.term.write_line(&drawable.get_status(config))?;
 
-        let (x, y) = *drawable.get_cursor();
-        self.term.move_cursor_to(x, y).map_err(|e| e.to_string())
+        if let Some(&(x, y)) = drawable.get_cursor() {
+            self.term.show_cursor()?;
+            self.term.move_cursor_to(x, y)?;
+        } else {
+            self.term.hide_cursor()?;
+        }
+
+        Ok(())
     }
 }
