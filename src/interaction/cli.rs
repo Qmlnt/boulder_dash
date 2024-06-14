@@ -1,5 +1,5 @@
 use super::{Drawable, Input, Interaction, Tui};
-use crate::{args::Config, objects::Labels};
+use crate::objects::Labels;
 use std::error::Error;
 
 pub struct Cli {
@@ -26,11 +26,7 @@ impl Interaction for Cli {
         self.tui.get_input()
     }
 
-    fn draw(
-        &mut self,
-        drawable: &mut impl Drawable,
-        config: &Config,
-    ) -> Result<(), Box<dyn Error>> {
+    fn draw(&mut self, drawable: &mut impl Drawable) -> Result<(), Box<dyn Error>> {
         let term = self.tui.get_term();
 
         for (x, y) in drawable.get_damaged() {
@@ -39,7 +35,7 @@ impl Interaction for Cli {
         }
 
         let bottom = drawable.get_objects().len();
-        let status = drawable.get_status(config);
+        let status = drawable.get_status();
 
         term.move_cursor_to(0, bottom + status.lines().count() + 1)?;
         term.clear_last_lines(status.lines().count())?;

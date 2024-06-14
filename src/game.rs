@@ -1,216 +1,148 @@
 use crate::{
-    args::Config,
+    args::Arguments,
     direction::Direction,
     interaction::{Drawable, Input, Interaction, Mode},
-    objects::{Behaviour, Object, Properties},
+    objects::Object,
     Point,
 };
 use std::{
     collections::HashSet,
-    fs, process, thread,
+    error::Error,
+    fs, io, thread,
     time::{Duration, Instant},
 };
 
-#[derive(Clone, PartialEq, Eq)]
-pub enum State {
-    Win,
-    Lose,
-}
-
-pub enum Request {
-    AddScore,
-    AddMaxScore,
-    UpdateState(State),
-    MoveObj(Point, Point), // (from, to)
-}
+pub mod level;
+use level::{Level, State};
 
 #[derive(Default)]
-pub struct Level {
-    file_name: String,
-    score: usize,
-    max_score: usize,
-    state: Option<State>,
-    player: Point,
-    damaged: HashSet<Point>,
-    matrix: Vec<Vec<Object>>,
+pub struct Game {
+    pause: bool,
+    delay: Duration,
+    level_idx: usize,
+    levels: Vec<Level>,
+    level_paths: Vec<String>,
 }
 
-// Getters
-impl Level {
-    pub const fn get_score(&self) -> &usize {
-        &self.score
-    }
-    pub const fn get_max_score(&self) -> &usize {
-        &self.max_score
-    }
-    pub const fn get_state(&self) -> &Option<State> {
-        &self.state
-    }
-    pub const fn get_player(&self) -> &Point {
-        &self.player
-    }
-    pub fn get_damaged(&mut self) -> HashSet<Point> {
-        std::mem::take(&mut self.damaged)
-    }
-    pub fn get_object(&self, (x, y): Point) -> &Object {
-        &self.matrix[y][x]
-    }
-    pub const fn get_objects(&self) -> &Vec<Vec<Object>> {
-        &self.matrix
-    }
-}
-
-impl Drawable for Level {
+impl Drawable for Game {
     fn get_damaged(&mut self) -> HashSet<Point> {
-        self.get_damaged()
+        self.get_level_mut().get_damaged()
     }
     fn get_objects(&self) -> &Vec<Vec<Object>> {
-        self.get_objects()
+        self.get_level().get_objects()
     }
     fn get_object(&self, point: Point) -> &Object {
-        self.get_object(point)
+        self.get_level().get_object(point)
     }
-    fn get_status(&self, config: &Config) -> String {
-        match self.state {
+    fn get_status(&self) -> String {
+        match self.get_level().get_state() {
             Some(State::Win) => "You have won!".to_string(),
             Some(State::Lose) => "You have lost!".to_string(),
             None => format!(
                 "Score: {}/{}\nDelay: {}ms\nPaused: {}",
-                self.get_score(),
-                self.get_max_score(),
-                config.delay.as_millis(),
-                if config.pause { "yes" } else { "no" }
+                self.get_level().get_score(),
+                self.get_level().get_max_score(),
+                self.delay.as_millis(),
+                if self.pause { "yes" } else { "no" }
             ),
         }
     }
 }
 
-impl Level {
-    pub fn new(file_name: &str) -> Result<Self, String> {
-        let mut level = Self {
-            file_name: file_name.to_string(),
+impl Game {
+    fn get_level(&self) -> &Level {
+        &self.levels[self.level_idx]
+    }
+    fn get_level_mut(&mut self) -> &mut Level {
+        &mut self.levels[self.level_idx]
+    }
+    fn get_level_path(&self) -> &str {
+        &self.level_paths[self.level_idx]
+    }
+
+    pub fn new(args: &Arguments) -> io::Result<Self> {
+        let mut game = Self {
+            pause: args.pause,
+            delay: args.delay,
+            level_paths: args.level_paths.clone(),
             ..Default::default()
         };
-        level.reload()?;
-        Ok(level)
-    }
 
-    fn reload(&mut self) -> Result<(), String> {
-        self.max_score = 0;
-        self.matrix = vec![];
-
-        let contents = fs::read_to_string(&self.file_name).map_err(|e| e.to_string())?;
-        for (y, line) in contents.lines().enumerate() {
-            let mut row = vec![];
-
-            for (x, chr) in line.chars().enumerate() {
-                let obj = Object::new(chr);
-                self.handle_requests(obj.init());
-                if obj.player() {
-                    self.player = (x, y);
-                }
-
-                self.damaged.insert((x, y));
-                row.push(obj);
-            }
-            self.matrix.push(row);
+        for path in &args.level_paths {
+            game.levels.push(Level::new(&fs::read_to_string(path)?));
         }
 
-        Ok(())
+        Ok(game)
     }
 
-    fn handle_requests(&mut self, requests: Vec<Request>) {
-        for request in requests {
-            match request {
-                Request::UpdateState(state) => {
-                    if self.state.is_none() {
-                        self.state = Some(state);
-                    }
-                }
-                Request::AddScore => self.score += 1,
-                Request::AddMaxScore => self.max_score += 1,
-                Request::MoveObj(from, to) => {
-                    if self.get_object(from).player() {
-                        self.player = to;
-                    }
-
-                    self.matrix[to.1][to.0] =
-                        std::mem::replace(&mut self.matrix[from.1][from.0], Object::get_void());
-                    self.damaged.extend([from, to]);
-                }
-            }
-        }
-    }
-
-    fn tick_objects(&mut self, direction: Option<Direction>) {
-        // Player
-        let requests = self
-            .get_object(self.player)
-            .tick(self, self.player, direction);
-        self.handle_requests(requests);
-
-        // Rocks
-        for y in (0..self.matrix.len()).rev() {
-            for x in 0..self.matrix[y].len() {
-                if self.get_object((x, y)).can_be_moved() {
-                    self.handle_requests(self.get_object((x, y)).tick(self, (x, y), None));
-                }
-            }
-        }
-    }
-
-    pub fn run(&mut self, config: &mut Config, interaction: &mut Mode) -> Result<State, String> {
-        let mut launch_pause = true;
+    pub fn run(&mut self, interaction: &mut Mode) -> Result<(), Box<dyn Error>> {
         let mut direction = None;
+        let mut launch_pause = true;
         let mut timer = Instant::now();
 
-        interaction.draw(self, config).map_err(|e| e.to_string())?;
+        interaction.draw(self)?;
 
         loop {
-            let mut input = true;
-            match interaction.get_input() {
-                Input::Unknown => input = false,
-                Input::Q => process::exit(0),
-                Input::R => {
-                    launch_pause = true;
-                    self.reload()?;
-                }
+            let mut update = true;
+
+            let input = interaction.get_input();
+            match input {
+                Input::Quit | Input::Q => return Ok(()),
                 Input::Comma => {
-                    if config.delay.as_millis() >= 100 {
-                        config.delay -= Duration::from_millis(50);
+                    if self.delay.as_millis() >= 100 {
+                        self.delay -= Duration::from_millis(50);
                     }
                 }
                 Input::Period => {
-                    if config.delay.as_millis() <= 950 {
-                        config.delay += Duration::from_millis(50);
+                    if self.delay.as_millis() <= 950 {
+                        self.delay += Duration::from_millis(50);
                     }
                 }
-                Input::Esc | Input::Space => config.pause = !config.pause,
+                Input::Esc | Input::Space => self.pause = !self.pause,
+                Input::R => {
+                    launch_pause = true;
+                    self.levels[self.level_idx] = Level::new(
+                        &fs::read_to_string(self.get_level_path()).map_err(|e| e.to_string())?,
+                    );
+                }
 
-                Input::Up | Input::W => direction = Some(Direction::Up),
-                Input::Down | Input::S => direction = Some(Direction::Down),
-                Input::Left | Input::A => direction = Some(Direction::Left),
-                Input::Right | Input::D => direction = Some(Direction::Right),
+                Input::Up
+                | Input::Down
+                | Input::Left
+                | Input::Right
+                | Input::W
+                | Input::A
+                | Input::S
+                | Input::D => direction = Direction::try_from(input).ok(),
+
+                Input::Unknown => update = false,
             }
 
-            if timer.elapsed() > config.delay {
+            if timer.elapsed() > self.delay {
                 timer = Instant::now();
 
                 if launch_pause && direction.is_some() {
                     launch_pause = false;
                 }
-                if (config.pause && direction.is_none()) || launch_pause {
+                if (self.pause && direction.is_none()) || launch_pause {
                     continue;
                 }
 
-                self.tick_objects(direction.take());
-                interaction.draw(self, config).map_err(|e| e.to_string())?;
+                self.get_level_mut().tick(direction.take());
+                interaction.draw(self)?;
 
-                if let Some(state) = self.get_state() {
-                    return Ok(state.clone());
+                if let Some(state) = self.get_level().get_state() {
+                    if *state == State::Lose || self.level_idx + 1 >= self.levels.len() {
+                        while !matches!(interaction.get_input(), Input::Quit | Input::Q) {
+                            thread::sleep(Duration::from_millis(100));
+                        }
+                        return Ok(());
+                    }
+
+                    self.level_idx += 1;
                 }
-            } else if input {
-                interaction.draw(self, config).map_err(|e| e.to_string())?;
+            } else if update {
+                interaction.draw(self)?;
             }
 
             thread::sleep(Duration::from_millis(10));

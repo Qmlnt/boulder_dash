@@ -1,6 +1,6 @@
 use super::{Behaviour, Labels, Properties};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dirt;
 
 impl Labels for Dirt {

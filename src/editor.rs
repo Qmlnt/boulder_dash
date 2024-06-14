@@ -2,18 +2,16 @@ use crate::{
     direction::Direction,
     interaction::{Drawable, Input, Interaction, Mode},
     objects::{Labels, Object},
-    Config,
+    Point,
 };
 use std::{collections::HashSet, fs, process, thread, time::Duration};
-
-pub type Point = (usize, usize); // (x, y)
 
 #[derive(Default)]
 pub struct Editor {
     file_name: String,
+    cursor: Point,
     pen_down: bool,
     current_object: usize,
-    cursor: Point,
     damaged: HashSet<Point>,
     matrix: Vec<Vec<Object>>,
 }
@@ -46,21 +44,21 @@ impl Drawable for Editor {
     fn get_object(&self, point: Point) -> &Object {
         self.get_object(point)
     }
-    fn get_status(&self, _: &Config) -> String {
+    fn get_status(&self) -> String {
         let (x, y) = *self.get_cursor();
-        let mut objects: Vec<String> = Object::all_objects().iter().map(|o| o.name()).collect();
-        objects[self.current_object].insert(0, '<');
-        objects[self.current_object].push('>');
+        let mut objects: Vec<String> = Object::get_all_valid().iter().map(Labels::name).collect();
+        objects[self.current_object].insert(0, '[');
+        objects[self.current_object].push(']');
         let pen = if self.pen_down { "down" } else { "up" };
 
-        format!("Pen {pen}\nCursor pos: ({x} {y})\n{}", objects.join(" "))
+        format!("Pen {pen}\nCursor pos: ({x}, {y})\n{}", objects.join(" "))
     }
 }
 
 impl Editor {
     pub fn new(file_name: &str) -> Result<Self, String> {
         let mut editor = Self {
-            file_name: file_name.to_string(),
+            file_name: file_name.to_owned(),
             ..Default::default()
         };
         editor.reload()?;
@@ -87,17 +85,17 @@ impl Editor {
             for obj in row {
                 line.push(obj.char());
             }
-            line.push('\n');
-            contents += &line;
+            contents += line.trim();
+            contents.push('\n');
         }
 
         fs::write(&self.file_name, contents).map_err(|e| e.to_string())
     }
 
-    pub fn run(&mut self, config: &mut Config, interaction: &mut Mode) -> Result<(), String> {
-        interaction.draw(self, config).map_err(|e| e.to_string())?;
+    pub fn run(&mut self, interaction: &mut Mode) -> Result<(), String> {
+        interaction.draw(self).map_err(|e| e.to_string())?;
 
-        let objects = Object::all_objects();
+        let objects = Object::get_all_valid();
 
         loop {
             thread::sleep(Duration::from_millis(25));
@@ -106,25 +104,26 @@ impl Editor {
 
             let input = interaction.get_input();
             match input {
-                Input::Q => {
+                Input::Quit | Input::Q => {
                     self.save()?;
                     process::exit(0);
                 }
                 Input::R => self.reload()?,
-                Input::Space | Input::Esc => {
+                Input::Esc => self.save()?,
+                Input::Space => {
                     self.pen_down = !self.pen_down;
-                }
-                Input::Period => {
-                    self.current_object += 1;
-                    if self.current_object >= objects.len() {
-                        self.current_object = 0;
-                    }
                 }
                 Input::Comma => {
                     if self.current_object == 0 {
                         self.current_object = objects.len();
                     }
                     self.current_object -= 1;
+                }
+                Input::Period => {
+                    self.current_object += 1;
+                    if self.current_object >= objects.len() {
+                        self.current_object = 0;
+                    }
                 }
 
                 Input::Up
@@ -134,7 +133,7 @@ impl Editor {
                 | Input::W
                 | Input::A
                 | Input::S
-                | Input::D => direction = Direction::from_input(&input),
+                | Input::D => direction = Direction::try_from(input).ok(),
 
                 Input::Unknown => continue,
             }
@@ -157,7 +156,7 @@ impl Editor {
                 self.damaged.insert(self.cursor);
             }
 
-            interaction.draw(self, config).map_err(|e| e.to_string())?;
+            interaction.draw(self).map_err(|e| e.to_string())?;
         }
     }
 }
