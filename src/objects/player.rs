@@ -1,6 +1,6 @@
 use super::{Behaviour, Direction, Labels, Level, Point, Properties, Request, State};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Player;
 
 impl Labels for Player {
@@ -38,11 +38,17 @@ impl Behaviour for Player {
             if player_broke {
                 requests.extend(level.get_object(next_point).on_broken(level));
             } else if can_move_next {
-                requests.push(Request::MoveObj(next_point, dir.apply_to(&next_point)));
+                requests.push(Request::MoveObj {
+                    from: next_point,
+                    to: dir.apply_to(&next_point),
+                });
             }
 
             if level.get_object(next_point).placeholder() || player_broke || can_move_next {
-                requests.push(Request::MoveObj(*level.get_player(), next_point));
+                requests.push(Request::MoveObj {
+                    from: *level.get_player(),
+                    to: next_point,
+                });
                 above_point = Direction::Up.apply_to(&next_point);
             }
         }
@@ -50,7 +56,10 @@ impl Behaviour for Player {
         // Check the rock above
         if !player_broke && level.get_object(above_point).can_be_moved() {
             requests.push(Request::UpdateState(State::Lose));
-            requests.push(Request::MoveObj(above_point, *level.get_player()));
+            requests.push(Request::MoveObj {
+                from: above_point,
+                to: *level.get_player(),
+            });
         }
 
         requests

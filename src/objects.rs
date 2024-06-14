@@ -1,6 +1,6 @@
 use crate::{
     direction::Direction,
-    game::{Level, Request, State},
+    game::level::{Level, Request, State},
     Point,
 };
 use enum_dispatch::enum_dispatch;
@@ -22,22 +22,22 @@ use void::Void;
 use wall::Wall;
 
 #[enum_dispatch]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Object {
     Gem,
     Wall,
     Dirt,
     Rock,
     Void,
-    Unknown,
     Player,
+    Unknown,
 }
 
 impl Object {
     pub fn get_void() -> Self {
         Void.into()
     }
-    pub fn all_objects() -> Vec<Self> {
+    pub fn get_all_valid() -> Vec<Self> {
         vec![
             Gem.into(),
             Wall.into(),

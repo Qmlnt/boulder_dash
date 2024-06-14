@@ -8,17 +8,22 @@ pub enum Direction {
     Right,
 }
 
-impl Direction {
-    pub const fn from_input(input: &Input) -> Option<Self> {
-        match input {
-            Input::Up | Input::W => Some(Self::Up),
-            Input::Down | Input::S => Some(Self::Down),
-            Input::Left | Input::A => Some(Self::Left),
-            Input::Right | Input::D => Some(Self::Right),
+impl TryFrom<Input> for Direction {
+    type Error = ();
 
-            _ => None,
+    fn try_from(input: Input) -> Result<Self, Self::Error> {
+        match input {
+            Input::Up | Input::W => Ok(Self::Up),
+            Input::Down | Input::S => Ok(Self::Down),
+            Input::Left | Input::A => Ok(Self::Left),
+            Input::Right | Input::D => Ok(Self::Right),
+
+            _ => Err(()),
         }
     }
+}
+
+impl Direction {
     pub const fn apply_to(&self, point: &(usize, usize)) -> (usize, usize) {
         let (x, y) = match self {
             Self::Up => (0, -1),

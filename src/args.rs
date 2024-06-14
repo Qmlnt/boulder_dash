@@ -15,11 +15,11 @@ OPTIONS:
         * gui
         * tui (default)
         * cli
-        Select display mode.
+        Select the interaction mode.
     -r, --run <string>
         * g / b / game (default)
         * e / editor
-        Select program to run.
+        Select the program mode.
     -s, --size <integer>
         Object size for GUI. (default 30 pixels).
     -d, --delay <integer>
@@ -27,13 +27,13 @@ OPTIONS:
 ";
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum AppMode {
+pub enum InteractionMode {
     Gui,
     Tui,
     Cli,
 }
 
-impl FromStr for AppMode {
+impl FromStr for InteractionMode {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
@@ -63,24 +63,24 @@ impl FromStr for ProgramMode {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Config {
+pub struct Arguments {
+    pub size: u32,
     pub pause: bool,
-    pub size: u16,
     pub delay: Duration,
-    pub app_mode: AppMode,
-    pub program_mode: ProgramMode,
     pub level_paths: Vec<String>,
+    pub program_mode: ProgramMode,
+    pub interaction_mode: InteractionMode,
 }
 
-impl Default for Config {
+impl Default for Arguments {
     fn default() -> Self {
         Self {
-            pause: false,
             size: 30,
+            pause: false,
             delay: Duration::from_millis(1000),
-            program_mode: ProgramMode::Game,
-            app_mode: AppMode::Tui,
             level_paths: vec![],
+            program_mode: ProgramMode::Game,
+            interaction_mode: InteractionMode::Tui,
         }
     }
 }
@@ -96,9 +96,8 @@ where
     }
 }
 
-// TODO: read from file
-impl Config {
-    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
+impl Arguments {
+    pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
         let mut config = Self::default();
 
         while let Some(arg) = args.next() {
@@ -113,10 +112,11 @@ impl Config {
                 "-d" | "--delay" => {
                     config.delay = Duration::from_millis(parse_arg(args.next(), arg.as_str())?);
                 }
-                "-l" | "--level" => config.level_paths.push(parse_arg(args.next(), arg.as_str())?),
-
-                "-m" | "--mode" => config.app_mode = parse_arg(args.next(), arg.as_str())?,
+                "-l" | "--level" => config
+                    .level_paths
+                    .push(parse_arg(args.next(), arg.as_str())?),
                 "-r" | "--run" => config.program_mode = parse_arg(args.next(), arg.as_str())?,
+                "-m" | "--mode" => config.interaction_mode = parse_arg(args.next(), arg.as_str())?,
 
                 _ => return Err(format!("Unrecognized option `{arg}`!")),
             }
@@ -124,7 +124,7 @@ impl Config {
 
         match config.level_paths.first() {
             Some(_) => Ok(config),
-            None => Err("Provide at least one level path!".into()),
+            None => Err("Specify a level path with `-l some/path`!".into()),
         }
     }
 }

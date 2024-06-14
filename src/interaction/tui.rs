@@ -1,5 +1,5 @@
 use super::{Drawable, Input, Interaction};
-use crate::{args::Config, objects::Labels};
+use crate::objects::Labels;
 use console::{Key, Term};
 use std::{error::Error, sync::mpsc, thread};
 
@@ -57,11 +57,7 @@ impl Interaction for Tui {
         })
     }
 
-    fn draw(
-        &mut self,
-        drawable: &mut impl Drawable,
-        config: &Config,
-    ) -> Result<(), Box<dyn Error>> {
+    fn draw(&mut self, drawable: &mut impl Drawable) -> Result<(), Box<dyn Error>> {
         self.term.clear_screen()?;
 
         for row in drawable.get_objects() {
@@ -73,7 +69,7 @@ impl Interaction for Tui {
         }
 
         self.term.write_line("")?;
-        self.term.write_line(&drawable.get_status(config))?;
+        self.term.write_line(&drawable.get_status())?;
 
         if let Some(&(x, y)) = drawable.get_cursor() {
             self.term.show_cursor()?;
