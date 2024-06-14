@@ -57,10 +57,10 @@ impl Level {
 impl Level {
     pub fn new(string: &str) -> Self {
         let mut level = Self::default();
-        for (y, line) in string.lines().enumerate() {
+        for (y, line) in string.trim().lines().enumerate() {
             let mut row = vec![];
 
-            for (x, chr) in line.chars().enumerate() {
+            for (x, chr) in line.trim().chars().enumerate() {
                 let obj = Object::new(chr);
                 level.handle_requests(obj.init());
                 if obj.player() {

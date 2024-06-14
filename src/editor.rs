@@ -35,8 +35,8 @@ impl Drawable for Editor {
     fn get_cursor(&self) -> Option<&Point> {
         Some(self.get_cursor())
     }
-    fn get_damaged(&mut self) -> HashSet<Point> {
-        self.get_damaged()
+    fn get_damaged(&mut self) -> Vec<Point> {
+        self.get_damaged().into_iter().collect()
     }
     fn get_objects(&self) -> &Vec<Vec<Object>> {
         self.get_objects()
@@ -69,7 +69,7 @@ impl Editor {
         self.matrix = vec![];
 
         let contents = fs::read_to_string(&self.file_name).map_err(|e| e.to_string())?;
-        for (y, line) in contents.lines().enumerate() {
+        for (y, line) in contents.trim().lines().enumerate() {
             self.matrix.push(line.chars().map(Object::new).collect());
             self.damaged.extend((0..line.len()).map(|x| (x, y)));
         }
@@ -89,7 +89,7 @@ impl Editor {
             contents.push('\n');
         }
 
-        fs::write(&self.file_name, contents).map_err(|e| e.to_string())
+        fs::write(&self.file_name, contents.trim()).map_err(|e| e.to_string())
     }
 
     pub fn run(&mut self, interaction: &mut Mode) -> Result<(), String> {
@@ -139,6 +139,7 @@ impl Editor {
             }
 
             if let Some(dir) = direction {
+                self.damaged.insert(self.cursor);
                 self.cursor = dir.apply_to(&self.cursor);
             }
 

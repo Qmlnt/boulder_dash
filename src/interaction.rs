@@ -4,7 +4,7 @@ use crate::{
     Point,
 };
 use enum_dispatch::enum_dispatch;
-use std::{collections::HashSet, error::Error};
+use std::error::Error;
 
 mod cli;
 mod gui;
@@ -62,7 +62,7 @@ pub trait Drawable {
         self.get_objects().len() + self.get_status().lines().count()
     }
     fn get_status(&self) -> String;
-    fn get_damaged(&mut self) -> HashSet<Point>;
+    fn get_damaged(&mut self) -> Vec<Point>;
     fn get_objects(&self) -> &Vec<Vec<Object>>;
     fn get_object(&self, point: Point) -> &Object;
 }

@@ -64,7 +64,7 @@ impl FromStr for ProgramMode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Arguments {
-    pub size: u16,
+    pub size: u32,
     pub pause: bool,
     pub delay: Duration,
     pub level_paths: Vec<String>,

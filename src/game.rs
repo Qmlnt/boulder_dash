@@ -25,8 +25,8 @@ pub struct Game {
 }
 
 impl Drawable for Game {
-    fn get_damaged(&mut self) -> HashSet<Point> {
-        self.get_level_mut().get_damaged()
+    fn get_damaged(&mut self) -> Vec<Point> {
+        self.get_level_mut().get_damaged().into_iter().collect()
     }
     fn get_objects(&self) -> &Vec<Vec<Object>> {
         self.get_level().get_objects()
