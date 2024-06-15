@@ -4,7 +4,7 @@ use crate::{
     Point,
 };
 use enum_dispatch::enum_dispatch;
-use std::error::Error;
+use std::{cmp, error::Error};
 
 mod cli;
 mod gui;
@@ -14,7 +14,7 @@ use cli::Cli;
 use gui::Gui;
 use tui::Tui;
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Input {
     Quit,
     Esc,
@@ -53,10 +53,16 @@ pub trait Drawable {
         None
     }
     fn get_width(&self) -> usize {
-        self.get_objects()
-            .iter()
-            .max_by_key(|r| r.len())
-            .map_or(0, Vec::len)
+        cmp::max(
+            self.get_objects()
+                .iter()
+                .max_by_key(|r| r.len())
+                .map_or(0, Vec::len),
+            self.get_status()
+                .lines()
+                .max_by_key(|r| r.len())
+                .map_or(0, |s| s.len() / 2),
+        )
     }
     fn get_height(&self) -> usize {
         self.get_objects().len() + self.get_status().lines().count()

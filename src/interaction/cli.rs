@@ -34,12 +34,10 @@ impl Interaction for Cli {
             term.write_line(&drawable.get_object((x, y)).char().to_string())?;
         }
 
-        let bottom = drawable.get_objects().len();
-        let status = drawable.get_status();
-
-        term.move_cursor_to(0, bottom + status.lines().count() + 1)?;
-        term.clear_last_lines(status.lines().count())?;
-        term.write_line(&status)?;
+        term.move_cursor_to(0, drawable.get_objects().len())?;
+        term.clear_to_end_of_screen()?;
+        term.move_cursor_down(1)?;
+        term.write_line(&drawable.get_status())?;
 
         if let Some(&(x, y)) = drawable.get_cursor() {
             term.show_cursor()?;

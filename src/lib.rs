@@ -5,12 +5,13 @@ mod game;
 mod interaction;
 mod objects;
 
-type Point = (usize, usize); // (x, y)
 pub use args::Arguments;
 use args::ProgramMode;
 use editor::Editor;
 use game::Game;
 use std::error::Error;
+
+type Point = (usize, usize); // (x, y)
 
 pub fn run(args: &Arguments) -> Result<(), Box<dyn Error>> {
     let mut mode = interaction::get_mode(args)?;
