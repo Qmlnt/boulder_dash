@@ -74,6 +74,11 @@ impl Editor {
             self.damaged.extend((0..line.len()).map(|x| (x, y)));
         }
 
+        if self.matrix.is_empty() {
+            self.matrix.push(vec![Object::get_void()]);
+            self.damaged.insert((0, 0));
+        }
+
         Ok(())
     }
 
@@ -144,10 +149,11 @@ impl Editor {
             }
 
             let (x, y) = self.cursor;
-            while self.matrix.len() < y + 1 {
+            while y + 1 > self.matrix.len() {
                 self.matrix.push(vec![]);
             }
-            while self.matrix[y].len() < x + 1 {
+            // Moving up or down on a shorter row
+            while x + 1 > self.matrix[y].len() {
                 self.matrix[y].push(Object::get_void());
                 self.damaged.insert((self.matrix[y].len() - 1, y));
             }

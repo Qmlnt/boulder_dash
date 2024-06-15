@@ -69,7 +69,7 @@ impl Interaction for Tui {
             self.term.write_line(&line)?;
         }
 
-        self.term.write_line("")?;
+        self.term.move_cursor_down(1)?;
         self.term.write_line(&drawable.get_status())?;
 
         if let Some(&(x, y)) = drawable.get_cursor() {
