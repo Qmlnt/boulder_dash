@@ -4,7 +4,7 @@ use crate::{
     objects::{Labels, Object},
     Point,
 };
-use std::{collections::HashSet, fs, process, thread, time::Duration};
+use std::{collections::HashSet, error::Error, fs, io, process, thread, time::Duration};
 
 #[derive(Default)]
 pub struct Editor {
@@ -56,7 +56,7 @@ impl Drawable for Editor {
 }
 
 impl Editor {
-    pub fn new(file_name: &str) -> Result<Self, String> {
+    pub fn new(file_name: &str) -> io::Result<Self> {
         let mut editor = Self {
             file_name: file_name.to_owned(),
             ..Default::default()
@@ -65,10 +65,10 @@ impl Editor {
         Ok(editor)
     }
 
-    fn reload(&mut self) -> Result<(), String> {
+    fn reload(&mut self) -> io::Result<()> {
         self.matrix = vec![];
 
-        let contents = fs::read_to_string(&self.file_name).map_err(|e| e.to_string())?;
+        let contents = fs::read_to_string(&self.file_name)?;
         for (y, line) in contents.trim().lines().enumerate() {
             self.matrix.push(line.chars().map(Object::new).collect());
             self.damaged.extend((0..line.len()).map(|x| (x, y)));
@@ -77,7 +77,7 @@ impl Editor {
         Ok(())
     }
 
-    fn save(&mut self) -> Result<(), String> {
+    fn save(&mut self) -> io::Result<()> {
         let mut contents = String::new();
 
         for row in &self.matrix {
@@ -89,11 +89,11 @@ impl Editor {
             contents.push('\n');
         }
 
-        fs::write(&self.file_name, contents.trim()).map_err(|e| e.to_string())
+        fs::write(&self.file_name, contents.trim())
     }
 
-    pub fn run(&mut self, interaction: &mut Mode) -> Result<(), String> {
-        interaction.draw(self).map_err(|e| e.to_string())?;
+    pub fn run(&mut self, interaction: &mut Mode) -> Result<(), Box<dyn Error>> {
+        interaction.draw(self)?;
 
         let objects = Object::get_all_valid();
 
@@ -157,7 +157,7 @@ impl Editor {
                 self.damaged.insert(self.cursor);
             }
 
-            interaction.draw(self).map_err(|e| e.to_string())?;
+            interaction.draw(self)?;
         }
     }
 }

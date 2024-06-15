@@ -6,7 +6,6 @@ use crate::{
     Point,
 };
 use std::{
-    collections::HashSet,
     error::Error,
     fs, io, thread,
     time::{Duration, Instant},
@@ -37,7 +36,7 @@ impl Drawable for Game {
     fn get_status(&self) -> String {
         match self.get_level().get_state() {
             Some(State::Win) => "You have won!".to_string(),
-            Some(State::Lose) => "You have lost!".to_string(),
+            Some(State::Lose) => "You have lost!\nR - reload".to_string(),
             None => format!(
                 "Score: {}/{}\nDelay: {}ms\nPaused: {}",
                 self.get_level().get_score(),
@@ -77,13 +76,13 @@ impl Game {
 
     pub fn run(&mut self, interaction: &mut Mode) -> Result<(), Box<dyn Error>> {
         let mut direction = None;
-        let mut launch_pause = true;
+        let mut paused_on_start = true;
         let mut timer = Instant::now();
 
         interaction.draw(self)?;
 
         loop {
-            let mut update = true;
+            thread::sleep(Duration::from_millis(10));
 
             let input = interaction.get_input();
             match input {
@@ -100,10 +99,11 @@ impl Game {
                 }
                 Input::Esc | Input::Space => self.pause = !self.pause,
                 Input::R => {
-                    launch_pause = true;
-                    self.levels[self.level_idx] = Level::new(
-                        &fs::read_to_string(self.get_level_path()).map_err(|e| e.to_string())?,
-                    );
+                    self.levels[self.level_idx] =
+                        Level::new(&fs::read_to_string(self.get_level_path())?);
+                    paused_on_start = true;
+                    interaction.draw(self)?;
+                    continue;
                 }
 
                 Input::Up
@@ -113,39 +113,38 @@ impl Game {
                 | Input::W
                 | Input::A
                 | Input::S
-                | Input::D => direction = Direction::try_from(input).ok(),
+                | Input::D => direction = Direction::try_from(input.clone()).ok(),
 
-                Input::Unknown => update = false,
+                Input::Unknown => (),
             }
 
-            if timer.elapsed() > self.delay {
-                timer = Instant::now();
-
-                if launch_pause && direction.is_some() {
-                    launch_pause = false;
-                }
-                if (self.pause && direction.is_none()) || launch_pause {
-                    continue;
-                }
-
-                self.get_level_mut().tick(direction.take());
-                interaction.draw(self)?;
-
-                if let Some(state) = self.get_level().get_state() {
-                    if *state == State::Lose || self.level_idx + 1 >= self.levels.len() {
-                        while !matches!(interaction.get_input(), Input::Quit | Input::Q) {
-                            thread::sleep(Duration::from_millis(100));
-                        }
-                        return Ok(());
-                    }
-
+            if let Some(state) = self.get_level().get_state() {
+                if *state == State::Win && self.level_idx + 1 < self.levels.len() {
                     self.level_idx += 1;
+                    paused_on_start = true;
+                    interaction.draw(self)?;
                 }
-            } else if update {
-                interaction.draw(self)?;
+                continue;
             }
 
-            thread::sleep(Duration::from_millis(10));
+            if timer.elapsed() < self.delay {
+                if input != Input::Unknown {
+                    interaction.draw(self)?;
+                }
+                continue;
+            }
+
+            timer = Instant::now();
+
+            if paused_on_start && direction.is_some() {
+                paused_on_start = false;
+            }
+            if (self.pause && direction.is_none()) || paused_on_start {
+                continue;
+            }
+
+            self.get_level_mut().tick(direction.take());
+            interaction.draw(self)?;
         }
     }
 }

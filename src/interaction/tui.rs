@@ -60,6 +60,7 @@ impl Interaction for Tui {
     fn draw(&mut self, drawable: &mut impl Drawable) -> Result<(), Box<dyn Error>> {
         self.term.clear_screen()?;
 
+        drawable.get_damaged(); // Empty damaged buffer
         for row in drawable.get_objects() {
             let mut line = String::new();
             for obj in row {

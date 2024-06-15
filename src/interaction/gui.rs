@@ -9,7 +9,7 @@ use sdl2::{
     render::{Canvas, TextureCreator, TextureQuery},
     ttf::Sdl2TtfContext,
     video::{Window, WindowContext},
-    EventPump,
+    EventPump, IntegerOrSdlError,
 };
 use std::{collections::BTreeMap, error::Error, fs};
 
@@ -30,7 +30,6 @@ impl Gui {
         let canvas = sdl_context
             .video()?
             .window("Boulder Dash", 1000, 1000)
-            // .fullscreen_desktop()
             .position_centered()
             .build()?
             .into_canvas()
@@ -53,6 +52,12 @@ impl Gui {
             texture_creator,
             texture_cache,
         })
+    }
+
+    fn resize_window(&mut self, (width, height): (u32, u32)) -> Result<(), IntegerOrSdlError> {
+        self.canvas.window_mut().set_minimum_size(width, height)?;
+        self.canvas.window_mut().set_maximum_size(width, height)?;
+        self.canvas.set_logical_size(width, height)
     }
 }
 
@@ -94,42 +99,35 @@ impl Interaction for Gui {
 
     fn draw(&mut self, drawable: &mut impl Drawable) -> Result<(), Box<dyn Error>> {
         self.canvas.set_draw_color(Color::BLACK);
-
+        // Redraw objects using the damaged buffer
         let mut objects_to_redraw = drawable.get_damaged();
-        println!("partial redraw");
 
-        // Resize the window
+        // WINDOW
 
-        let window_size = (
-            u32::try_from(drawable.get_width())? * (self.scale + 1),
-            u32::try_from(drawable.get_height())? * self.scale + self.scale / 4,
+        let drawable_size = (
+            u32::try_from(drawable.get_width())? * self.scale,
+            // scale + 1 is padding for the status
+            u32::try_from(drawable.get_height())? * (self.scale + 1),
         );
+        if drawable_size != self.canvas.window().size() {
+            // TODO: why it takes 2 calls to resize normally
+            self.resize_window(drawable_size)?;
+            self.resize_window(drawable_size)?;
+            self.canvas.clear(); // clear the artifacts after resize
 
-        if self.canvas.window().size() != window_size {
-            // Redraw all objects if size has changed
+            // Redraw all objects
             objects_to_redraw = drawable
                 .get_objects()
                 .iter()
                 .enumerate()
                 .flat_map(|(y, row)| (0..row.len()).map(move |x| (x, y)))
                 .collect();
-
-            self.canvas.clear();
-            self.canvas
-                .window_mut()
-                .set_minimum_size(window_size.0, window_size.1)?;
-            self.canvas
-                .window_mut()
-                .set_size(window_size.0, window_size.1)?;
-
-            println!("full redraw");
         }
-        println!("{:?} / {:?}", self.canvas.window().size(), window_size);
 
-        // Redrawing the matrix
+        // OBJECTS
 
         for (x, y) in objects_to_redraw {
-            let pos = Rect::new(
+            let rect = Rect::new(
                 i32::try_from(x)? * i32::try_from(self.scale)?,
                 i32::try_from(y)? * i32::try_from(self.scale)?,
                 self.scale,
@@ -138,23 +136,23 @@ impl Interaction for Gui {
             let bytes = &self.texture_cache[&drawable.get_object((x, y)).name()];
             let texture = self.texture_creator.load_texture_bytes(bytes)?;
 
-            self.canvas.fill_rect(pos)?;
-            self.canvas.copy(&texture, None, pos)?;
+            self.canvas.fill_rect(rect)?; // clear the old texture
+            self.canvas.copy(&texture, None, rect)?;
         }
 
-        // Displaying the status
+        // STATUS
 
         let font = self
             .ttf_context
             .load_font("assets/font.ttf", u16::try_from(self.scale)?)?;
         let mut level_bottom = u32::try_from(drawable.get_objects().len())? * self.scale;
 
-        // Clear the old status
+        // Clear the bottom of the screen
         self.canvas.fill_rect(Rect::new(
             0,
             i32::try_from(level_bottom)?,
-            window_size.0,
-            window_size.1.saturating_sub(level_bottom),
+            drawable_size.0,
+            drawable_size.1.saturating_sub(level_bottom),
         ))?;
 
         // Draw the status line by line
@@ -165,13 +163,13 @@ impl Interaction for Gui {
                 .create_texture_from_surface(&font_surface)?;
 
             let TextureQuery { width, height, .. } = font_texture.query();
-            let pos = Rect::new(5, i32::try_from(level_bottom)?, width, height);
-            self.canvas.copy(&font_texture, None, pos)?;
+            let rect = Rect::new(5, i32::try_from(level_bottom)?, width, height);
+            self.canvas.copy(&font_texture, None, rect)?;
 
             level_bottom += self.scale;
         }
 
-        // Drawing the cursor if needed
+        // CURSOR
 
         if let Some(&(x, y)) = drawable.get_cursor() {
             self.canvas.set_draw_color(Color::RGB(0, 255, 0));
@@ -186,6 +184,7 @@ impl Interaction for Gui {
             }
         }
 
+        // Displaying the backbuffer
         self.canvas.present();
 
         Ok(())
