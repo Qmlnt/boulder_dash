@@ -61,7 +61,7 @@ pub trait Drawable {
             self.get_status()
                 .lines()
                 .max_by_key(|r| r.len())
-                .map_or(0, |s| s.len() / 2),
+                .map_or(0, |s| s.len() * 3 / 5),
         )
     }
     fn get_height(&self) -> usize {
@@ -70,7 +70,7 @@ pub trait Drawable {
     fn get_status(&self) -> String;
     fn get_damaged(&mut self) -> Vec<Point>;
     fn get_objects(&self) -> &Vec<Vec<Object>>;
-    fn get_object(&self, point: Point) -> &Object;
+    fn get_object(&self, point: Point) -> Option<&Object>;
 }
 
 pub fn get_mode(args: &Arguments) -> Result<Mode, String> {

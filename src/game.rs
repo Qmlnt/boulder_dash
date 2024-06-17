@@ -30,9 +30,10 @@ impl Drawable for Game {
     fn get_objects(&self) -> &Vec<Vec<Object>> {
         self.get_level().get_objects()
     }
-    fn get_object(&self, point: Point) -> &Object {
-        self.get_level().get_object(point)
+    fn get_object(&self, (x, y): Point) -> Option<&Object> {
+        self.get_level().get_objects().get(y)?.get(x)
     }
+
     fn get_status(&self) -> String {
         match self.get_level().get_state() {
             Some(State::Win) => "You have won!".to_string(),
@@ -101,6 +102,7 @@ impl Game {
                 Input::R => {
                     self.levels[self.level_idx] =
                         Level::new(&fs::read_to_string(self.get_level_path())?);
+                    direction = None;
                     paused_on_start = true;
                     interaction.draw(self)?;
                     continue;
@@ -121,7 +123,6 @@ impl Game {
             if let Some(state) = self.get_level().get_state() {
                 if *state == State::Win && self.level_idx + 1 < self.levels.len() {
                     self.level_idx += 1;
-                    paused_on_start = true;
                     interaction.draw(self)?;
                 }
                 continue;

@@ -16,37 +16,27 @@ pub struct Editor {
     matrix: Vec<Vec<Object>>,
 }
 
-impl Editor {
-    pub const fn get_cursor(&self) -> &Point {
-        &self.cursor
-    }
-    pub fn get_damaged(&mut self) -> HashSet<Point> {
-        std::mem::take(&mut self.damaged)
-    }
-    pub fn get_object(&self, (x, y): Point) -> &Object {
-        &self.matrix[y][x]
-    }
-    pub const fn get_objects(&self) -> &Vec<Vec<Object>> {
-        &self.matrix
-    }
-}
-
 impl Drawable for Editor {
     fn get_cursor(&self) -> Option<&Point> {
-        Some(self.get_cursor())
+        Some(&self.cursor)
     }
+
     fn get_damaged(&mut self) -> Vec<Point> {
-        self.get_damaged().into_iter().collect()
+        std::mem::take(&mut self.damaged).into_iter().collect()
     }
     fn get_objects(&self) -> &Vec<Vec<Object>> {
-        self.get_objects()
+        &self.matrix
     }
-    fn get_object(&self, point: Point) -> &Object {
-        self.get_object(point)
+    fn get_object(&self, (x, y): Point) -> Option<&Object> {
+        self.matrix.get(y)?.get(x)
     }
+
     fn get_status(&self) -> String {
-        let (x, y) = *self.get_cursor();
-        let mut objects: Vec<String> = Object::get_all_valid().iter().map(Labels::name).collect();
+        let (x, y) = self.cursor;
+        let mut objects: Vec<String> = Object::get_all_displayable()
+            .iter()
+            .map(Labels::name)
+            .collect();
         objects[self.current_object].insert(0, '[');
         objects[self.current_object].push(']');
         let pen = if self.pen_down { "down" } else { "up" };
@@ -75,7 +65,7 @@ impl Editor {
         }
 
         if self.matrix.is_empty() {
-            self.matrix.push(vec![Object::get_void()]);
+            self.matrix.push(vec![Object::default()]);
             self.damaged.insert((0, 0));
         }
 
@@ -100,7 +90,7 @@ impl Editor {
     pub fn run(&mut self, interaction: &mut Mode) -> Result<(), Box<dyn Error>> {
         interaction.draw(self)?;
 
-        let objects = Object::get_all_valid();
+        let objects = Object::get_all_displayable();
 
         loop {
             thread::sleep(Duration::from_millis(25));
@@ -144,22 +134,47 @@ impl Editor {
             }
 
             if let Some(dir) = direction {
+                match dir {
+                    Direction::Up => {
+                        if self
+                            .matrix
+                            .last()
+                            .unwrap()
+                            .iter()
+                            .all(|o| *o == Object::default())
+                        {
+                            self.matrix.pop();
+                        }
+                    }
+                    Direction::Left => {
+                        for row in &mut self.matrix {
+                            while self.cursor.0 < row.len()
+                                && row[row.len() - 1] == Object::default()
+                            {
+                                row.pop();
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+
                 self.damaged.insert(self.cursor);
                 self.cursor = dir.apply_to(&self.cursor);
             }
 
             let (x, y) = self.cursor;
+
             while y + 1 > self.matrix.len() {
                 self.matrix.push(vec![]);
             }
             // Moving up or down on a shorter row
             while x + 1 > self.matrix[y].len() {
-                self.matrix[y].push(Object::get_void());
+                self.matrix[y].push(Object::default());
                 self.damaged.insert((self.matrix[y].len() - 1, y));
             }
 
             if self.pen_down {
-                self.matrix[y][x] = objects[self.current_object].clone();
+                self.matrix[self.cursor.1][self.cursor.0] = objects[self.current_object].clone();
                 self.damaged.insert(self.cursor);
             }
 

@@ -91,8 +91,7 @@ impl Level {
                         self.player = to;
                     }
 
-                    self.matrix[to.1][to.0] =
-                        std::mem::replace(&mut self.matrix[from.1][from.0], Object::get_void());
+                    self.matrix[to.1][to.0] = std::mem::take(&mut self.matrix[from.1][from.0]);
                     self.damaged.extend([from, to]);
                 }
             }
@@ -109,8 +108,8 @@ impl Level {
         // Rocks
         for y in (0..self.matrix.len()).rev() {
             for x in 0..self.matrix[y].len() {
-                if self.get_object((x, y)).can_be_moved() {
-                    self.handle_requests(self.get_object((x, y)).tick(self, (x, y), None));
+                if self.matrix[y][x].can_be_moved() {
+                    self.handle_requests(self.matrix[y][x].tick(self, (x, y), None));
                 }
             }
         }
