@@ -58,7 +58,7 @@ impl Behaviour for Player {
             requests.push(Request::UpdateState(State::Lose));
             requests.push(Request::MoveObj {
                 from: above_point,
-                to: *level.get_player(),
+                to: Direction::Down.apply_to(&above_point),
             });
         }
 

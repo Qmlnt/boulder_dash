@@ -30,8 +30,10 @@ impl Interaction for Cli {
         let term = self.tui.get_term();
 
         for (x, y) in drawable.get_damaged() {
-            term.move_cursor_to(x, y)?;
-            term.write_line(&drawable.get_object((x, y)).char().to_string())?;
+            if let Some(obj) = drawable.get_object((x, y)) {
+                term.move_cursor_to(x, y)?;
+                term.write_line(&obj.char().to_string())?;
+            }
         }
 
         term.move_cursor_to(0, drawable.get_objects().len())?;

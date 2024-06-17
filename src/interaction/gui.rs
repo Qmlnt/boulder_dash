@@ -29,7 +29,7 @@ impl Gui {
 
         let canvas = sdl_context
             .video()?
-            .window("Boulder Dash", 1000, 1000)
+            .window("Boulder Dash", 0, 0)
             .position_centered()
             .build()?
             .into_canvas()
@@ -56,8 +56,9 @@ impl Gui {
 
     fn resize_window(&mut self, (width, height): (u32, u32)) -> Result<(), IntegerOrSdlError> {
         self.canvas.window_mut().set_minimum_size(width, height)?;
-        self.canvas.window_mut().set_maximum_size(width, height)?;
-        self.canvas.set_logical_size(width, height)
+        self.canvas.window_mut().set_maximum_size(width, height)
+        // self.canvas.window_mut().set_size(width, height)?;
+        // self.canvas.set_logical_size(width, height)
     }
 }
 
@@ -133,11 +134,13 @@ impl Interaction for Gui {
                 self.scale,
                 self.scale,
             );
-            let bytes = &self.texture_cache[&drawable.get_object((x, y)).name()];
-            let texture = self.texture_creator.load_texture_bytes(bytes)?;
+            self.canvas.fill_rect(rect)?; // clear the old artifacts
 
-            self.canvas.fill_rect(rect)?; // clear the old texture
-            self.canvas.copy(&texture, None, rect)?;
+            if let Some(obj) = drawable.get_object((x, y)) {
+                let bytes = &self.texture_cache[&obj.name()];
+                let texture = self.texture_creator.load_texture_bytes(bytes)?;
+                self.canvas.copy(&texture, None, rect)?;
+            }
         }
 
         // STATUS
@@ -163,7 +166,7 @@ impl Interaction for Gui {
                 .create_texture_from_surface(&font_surface)?;
 
             let TextureQuery { width, height, .. } = font_texture.query();
-            let rect = Rect::new(5, i32::try_from(level_bottom)?, width, height);
+            let rect = Rect::new(0, i32::try_from(level_bottom)?, width, height);
             self.canvas.copy(&font_texture, None, rect)?;
 
             level_bottom += self.scale;
@@ -185,6 +188,10 @@ impl Interaction for Gui {
         }
 
         // Displaying the backbuffer
+
+        // TODO: why 3 calls?
+        self.canvas.present();
+        self.canvas.present();
         self.canvas.present();
 
         Ok(())

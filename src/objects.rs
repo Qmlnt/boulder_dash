@@ -33,17 +33,20 @@ pub enum Object {
     Unknown,
 }
 
-impl Object {
-    pub fn get_void() -> Self {
+impl Default for Object {
+    fn default() -> Self {
         Void.into()
     }
-    pub fn get_all_valid() -> Vec<Self> {
+}
+
+impl Object {
+    pub fn get_all_displayable() -> Vec<Self> {
         vec![
-            Gem.into(),
-            Wall.into(),
-            Dirt.into(),
-            Rock.into(),
             Void.into(),
+            Wall.into(),
+            Rock.into(),
+            Dirt.into(),
+            Gem.into(),
             Player.into(),
         ]
     }
