@@ -17,11 +17,7 @@ pub fn run(args: &Arguments) -> Result<(), Box<dyn Error>> {
     let mut mode = interaction::get_mode(args)?;
 
     match args.program_mode {
-        ProgramMode::Game => Game::new(args)?.run(&mut mode)?,
-        ProgramMode::Editor => {
-            Editor::new(&args.level_paths[0])?.run(&mut mode)?;
-        }
+        ProgramMode::Game => Game::new(args)?.run(&mut mode),
+        ProgramMode::Editor => Editor::new(args)?.run(&mut mode),
     }
-
-    Ok(())
 }

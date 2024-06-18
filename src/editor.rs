@@ -1,10 +1,11 @@
 use crate::{
+    args::Arguments,
     direction::Direction,
     interaction::{Drawable, Input, Interaction, Mode},
     objects::{Labels, Object},
     Point,
 };
-use std::{collections::HashSet, error::Error, fs, io, process, thread, time::Duration};
+use std::{collections::HashSet, error::Error, fs, io, thread, time::Duration};
 
 #[derive(Default)]
 pub struct Editor {
@@ -46,9 +47,9 @@ impl Drawable for Editor {
 }
 
 impl Editor {
-    pub fn new(file_name: &str) -> io::Result<Self> {
+    pub fn new(args: &Arguments) -> io::Result<Self> {
         let mut editor = Self {
-            file_name: file_name.to_owned(),
+            file_name: args.level_paths[0].clone(),
             ..Default::default()
         };
         editor.reload()?;
@@ -59,7 +60,7 @@ impl Editor {
         self.matrix = vec![];
 
         let contents = fs::read_to_string(&self.file_name)?;
-        for (y, line) in contents.trim().lines().enumerate() {
+        for (y, line) in contents.trim().lines().map(str::trim).enumerate() {
             self.matrix.push(line.chars().map(Object::new).collect());
             self.damaged.extend((0..line.len()).map(|x| (x, y)));
         }
@@ -76,11 +77,7 @@ impl Editor {
         let mut contents = String::new();
 
         for row in &self.matrix {
-            let mut line = String::new();
-            for obj in row {
-                line.push(obj.char());
-            }
-            contents += line.trim();
+            contents += row.iter().map(Labels::char).collect::<String>().trim();
             contents.push('\n');
         }
 
@@ -101,9 +98,12 @@ impl Editor {
             match input {
                 Input::Quit | Input::Q => {
                     self.save()?;
-                    process::exit(0);
+                    return Ok(());
                 }
-                Input::R => self.reload()?,
+                Input::R => {
+                    self.reload()?;
+                    self.pen_down = false;
+                }
                 Input::Esc => self.save()?,
                 Input::Space => {
                     self.pen_down = !self.pen_down;
@@ -136,12 +136,11 @@ impl Editor {
             if let Some(dir) = direction {
                 match dir {
                     Direction::Up => {
-                        if self
-                            .matrix
-                            .last()
-                            .unwrap()
-                            .iter()
-                            .all(|o| *o == Object::default())
+                        if self.matrix.len() > 1
+                            && self
+                                .matrix
+                                .last()
+                                .map_or(false, |l| l.iter().all(|o| *o == Object::default()))
                         {
                             self.matrix.pop();
                         }
@@ -149,7 +148,7 @@ impl Editor {
                     Direction::Left => {
                         for row in &mut self.matrix {
                             while self.cursor.0 < row.len()
-                                && row[row.len() - 1] == Object::default()
+                                && *row.last().unwrap() == Object::default()
                             {
                                 row.pop();
                             }
