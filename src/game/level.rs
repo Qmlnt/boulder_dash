@@ -15,7 +15,6 @@ pub enum Request {
     AddScore,
     AddMaxScore,
     UpdateState(State),
-    // AddObj { object: Object, point: Point }, TODO: use a map instead of the matrix?
     MoveObj { from: Point, to: Point }, // (from, to)
 }
 
